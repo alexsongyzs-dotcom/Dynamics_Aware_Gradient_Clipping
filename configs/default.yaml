@@ -1,0 +1,19 @@
+# Default Hydra configuration (experiment A0: instrumentation validation)
+defaults:
+  - datasets: cifar10
+  - models: resnet18
+  - optimizers: sgd
+  - clipping: fixed
+  - _self_
+
+seed: 0
+device: cuda
+epochs: 90
+batch_size: 128
+num_workers: 4
+
+logging:
+  log_every: 10
+  hessian_checkpoints: [0, 10, 30, 60, 89]
+  save_trajectory_projections: true
+  projection_dim: 512

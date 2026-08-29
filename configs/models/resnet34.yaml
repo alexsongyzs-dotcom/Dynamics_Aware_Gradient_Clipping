@@ -1,0 +1,4 @@
+# ResNet-34
+name: resnet34
+pretrained: false
+num_classes: 100

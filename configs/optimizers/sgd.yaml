@@ -1,0 +1,7 @@
+# SGD with optional momentum
+name: sgd
+lr: 0.1
+momentum: 0.9
+weight_decay: 5e-4
+nesterov: true
+schedule: cosine   # or step

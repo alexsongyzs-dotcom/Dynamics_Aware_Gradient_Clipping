@@ -1,0 +1,7 @@
+# Dynamics-aware adaptive gradient clipping (proposed)
+name: dagc
+gamma: 0.05
+beta: 0.9
+c_min_scale: 0.1
+c_max_scale: 10.0
+signal: auto   # selected after experiments A1-A7

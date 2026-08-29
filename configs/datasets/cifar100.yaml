@@ -1,0 +1,6 @@
+# CIFAR-100 dataset
+name: cifar100
+download: true
+data_dir: ${oc.env:DAGC_DATA_DIR,data}
+normalize: true
+augmentation: standard

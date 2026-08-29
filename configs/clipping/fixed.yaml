@@ -1,0 +1,3 @@
+# Fixed global norm clipping (baseline)
+name: fixed
+threshold: 1.0

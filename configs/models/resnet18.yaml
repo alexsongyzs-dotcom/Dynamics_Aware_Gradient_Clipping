@@ -1,0 +1,4 @@
+# ResNet-18 (torchvision)
+name: resnet18
+pretrained: false
+num_classes: 10

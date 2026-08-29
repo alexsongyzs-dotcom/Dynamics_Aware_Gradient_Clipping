@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.mypy_cache/
+.pytest_cache/
+
+# Data and results (too large / generated)
+data/
+results/raw/
+results/aggregated/
+results/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Logs and tracking
+*.log
+wandb/
+runs/
+tensorboard/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# LaTeX artifacts (docs)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.synctex.gz
