@@ -1,0 +1,21 @@
+base_config: ../default.yaml
+run_id: p0-measurement-validation
+epochs: 2
+device: cpu
+output_dir: results/p0_measurement
+dataset:
+  name: fashion_mnist
+  download: false
+model:
+  name: small_cnn
+optimizer:
+  lr: 0.01
+  momentum: 0.0
+  nesterov: false
+  schedule: none
+logging:
+  probe_size: 128
+  gradient_sketch_size: 16
+  hessian_checkpoints: []
+checkpointing:
+  every_epochs: 0

@@ -1,0 +1,5 @@
+name: frozen_gain
+sequence_path: results/branches/intervention_sequences.json
+field: reference_gain
+repeat_last: false
+placement: pre_moment

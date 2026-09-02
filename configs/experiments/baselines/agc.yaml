@@ -1,0 +1,7 @@
+base_config: ../../default.yaml
+run_id: baseline-agc
+clipping:
+  name: agc
+  eps: 0.001
+  clip_value: 0.01
+  placement: pre_moment

@@ -1,0 +1,10 @@
+base_config: ../default.yaml
+run_id: p1-screen
+epochs: 20
+output_dir: results/p1_screen
+logging:
+  probe_size: 512
+  gradient_sketch_size: 32
+  hessian_checkpoints: []
+checkpointing:
+  every_epochs: 5

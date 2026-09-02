@@ -1,218 +1,540 @@
-"""Training entry point with dynamical diagnostics.
+"""Training engine for measurement, replay, and causal branch experiments.
 
-Runs a single training run with configurable model, dataset, optimizer,
-clipping policy, and dynamical logging. Supports Hessian measurements at
-selected checkpoints.
+Nothing in this module executes on import. Linux runs should invoke
+``python -m src.train --config <yaml>`` after the environment and data are
+prepared.
 """
 
 from __future__ import annotations
 
+import argparse
+import copy
+import math
+from pathlib import Path
 import random
-from typing import Callable
+from typing import Any
 
 import numpy as np
 import torch
 import torch.nn as nn
-from torch import Tensor
-
-from src.clipping import DynamicsAwareClipping, clipping_coefficient, clipping_indicator, clipping_intensity
-from src.data import build_loaders
-from src.dynamics import gradient_alignment
+from src.checkpointing import build_checkpoint, load_checkpoint, save_checkpoint
+from src.clipping import (
+    AdaGCPolicy,
+    ClipDecision,
+    ClippingPlacement,
+    PolicyContext,
+    apply_agc_,
+    apply_post_update_decision_,
+    build_policy,
+    flatten_gradients,
+    gradient_norm,
+    parameter_update_norm,
+    scale_gradients_,
+    snapshot_parameters,
+    trainable_parameters,
+)
+from src.configuration import load_config, parse_override, set_dotted
+from src.data import build_data_bundle
+from src.dynamics import (
+    ClippingEpisodeTracker,
+    DynamicsHistory,
+    HysteresisConfig,
+    gradient_alignment,
+    optimizer_state_metrics,
+)
 from src.hessian import top_eigenvalue
 from src.models import build_model
+from src.optimizers import StableAdamW
+from src.projection import GradientSketcher
+from src.records import RunRecorder, config_hash
 
 
-def set_seed(seed: int) -> None:
+def set_seed(seed: int, deterministic: bool = False) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    if deterministic:
+        torch.use_deterministic_algorithms(True)
+        if torch.backends.cudnn.is_available():
+            torch.backends.cudnn.benchmark = False
 
 
-def _flatten_grads(model: nn.Module) -> Tensor:
-    parts = [p.grad.detach().reshape(-1) for p in model.parameters() if p.grad is not None]
-    if not parts:
-        return torch.zeros(1)
-    return torch.cat(parts)
+def _mapping(value: Any, default_name: str) -> dict[str, Any]:
+    if value is None:
+        return {"name": default_name}
+    if isinstance(value, str):
+        return {"name": value}
+    if isinstance(value, dict):
+        return dict(value)
+    raise TypeError(f"expected a string or mapping, got {type(value).__name__}")
 
 
-def _apply_coefficient(model: nn.Module, coeff: float) -> None:
-    if coeff >= 1.0:
-        return
-    for p in model.parameters():
-        if p.grad is not None:
-            p.grad.mul_(coeff)
+def _section(config: dict, singular: str, plural: str, default_name: str) -> dict[str, Any]:
+    return _mapping(config.get(singular, config.get(plural)), default_name)
 
 
-def train_run(cfg: dict, verbose: bool = False) -> dict:
-    """Train one configuration; return diagnostics and metrics.
+def _device(requested: str) -> torch.device:
+    if requested.startswith("cuda") and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested but is not available")
+    return torch.device(requested)
 
-    cfg keys: model, dataset, data_dir, epochs, batch_size, lr, momentum,
-    weight_decay, clipping (dict), seed, device, log_every, hessian_epochs,
-    projection_dim (random projections of gradients).
-    verbose: print per-epoch progress for live monitoring.
+
+def _optimizer(parameters, config: dict) -> torch.optim.Optimizer:
+    name = str(config.get("name", "sgd")).lower()
+    if name == "sgd":
+        return torch.optim.SGD(
+            parameters,
+            lr=float(config.get("lr", 0.1)),
+            momentum=float(config.get("momentum", 0.0)),
+            weight_decay=float(config.get("weight_decay", 0.0)),
+            nesterov=bool(config.get("nesterov", False)),
+        )
+    if name == "adamw":
+        return torch.optim.AdamW(
+            parameters,
+            lr=float(config.get("lr", 1e-3)),
+            betas=tuple(float(value) for value in config.get("betas", (0.9, 0.999))),
+            eps=float(config.get("eps", 1e-8)),
+            weight_decay=float(config.get("weight_decay", 0.0)),
+        )
+    if name == "stable_adamw":
+        return StableAdamW(
+            parameters,
+            lr=float(config.get("lr", 1e-3)),
+            betas=tuple(float(value) for value in config.get("betas", (0.9, 0.999))),
+            eps=float(config.get("eps", 1e-8)),
+            weight_decay=float(config.get("weight_decay", 0.0)),
+        )
+    raise ValueError(f"unknown optimizer: {name}")
+
+
+def _scheduler(
+    optimizer: torch.optim.Optimizer, config: dict, epochs: int
+) -> torch.optim.lr_scheduler.LRScheduler | None:
+    name = str(config.get("schedule", "none")).lower()
+    if name in {"none", "constant"}:
+        return None
+    if name == "cosine":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, epochs))
+    if name == "step":
+        return torch.optim.lr_scheduler.MultiStepLR(
+            optimizer,
+            milestones=[int(value) for value in config.get("milestones", (60, 80))],
+            gamma=float(config.get("gamma", 0.1)),
+        )
+    raise ValueError(f"unknown learning-rate schedule: {name}")
+
+
+@torch.no_grad()
+def evaluate(model: nn.Module, loader, loss_fn: nn.Module, device: torch.device) -> dict[str, float]:
+    training = model.training
+    model.eval()
+    total_loss = 0.0
+    correct = 0
+    count = 0
+    for inputs, targets in loader:
+        inputs, targets = inputs.to(device), targets.to(device)
+        logits = model(inputs)
+        total_loss += float(loss_fn(logits, targets)) * targets.numel()
+        correct += int((logits.argmax(dim=1) == targets).sum())
+        count += int(targets.numel())
+    model.train(training)
+    return {"loss": total_loss / max(count, 1), "accuracy": correct / max(count, 1)}
+
+
+def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
+    """Execute one declared run and return a compact summary.
+
+    This function is intentionally explicit about intervention placement and
+    checkpoint state. It is not called during repository construction.
     """
-    device = torch.device(cfg.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
-    set_seed(cfg["seed"])
-    num_classes = 10 if cfg["dataset"] != "cifar10" else 10
 
-    model = build_model(cfg["model"], num_classes=num_classes).to(device)
-    train_loader, test_loader = build_loaders(
-        cfg["dataset"],
-        cfg.get("data_dir", "data"),
-        cfg.get("batch_size", 256),
-        num_workers=cfg.get("num_workers", 2),
-        download=True,
+    cfg = copy.deepcopy(config)
+    seed = int(cfg.get("seed", 0))
+    set_seed(seed, deterministic=bool(cfg.get("deterministic", False)))
+    device = _device(str(cfg.get("device", "cuda")))
+
+    dataset_cfg = _section(cfg, "dataset", "datasets", "cifar10")
+    model_cfg = _section(cfg, "model", "models", "resnet18")
+    optimizer_cfg = _section(cfg, "optimizer", "optimizers", "sgd")
+    clipping_cfg = _mapping(cfg.get("clipping"), "none")
+    logging_cfg = dict(cfg.get("logging", {}))
+    checkpoint_cfg = dict(cfg.get("checkpointing", {}))
+
+    epochs = int(cfg.get("epochs", 1))
+    bundle = build_data_bundle(
+        dataset=str(dataset_cfg.get("name", "cifar10")),
+        data_dir=str(dataset_cfg.get("data_dir", cfg.get("data_dir", "data"))),
+        batch_size=int(cfg.get("batch_size", 128)),
+        num_workers=int(cfg.get("num_workers", 0)),
+        seed=seed,
+        probe_size=int(logging_cfg.get("probe_size", 1024)),
+        download=bool(dataset_cfg.get("download", False)),
+        pin_memory=bool(cfg.get("pin_memory", True)),
+    )
+    image_size = 28 if dataset_cfg.get("name") in {"mnist", "fashion_mnist"} else 32
+    model_kwargs = {key: value for key, value in model_cfg.items() if key not in {"name", "num_classes", "pretrained"}}
+    model = build_model(
+        str(model_cfg.get("name", "resnet18")),
+        num_classes=bundle.num_classes,
+        input_channels=bundle.input_channels,
+        image_size=image_size,
+        **model_kwargs,
+    ).to(device)
+    parameters = trainable_parameters(model)
+    optimizer = _optimizer(parameters, optimizer_cfg)
+    scheduler = _scheduler(optimizer, optimizer_cfg, epochs)
+    loss_fn = nn.CrossEntropyLoss()
+
+    policy = build_policy(clipping_cfg)
+    placement = ClippingPlacement(clipping_cfg.get("placement", "pre_moment"))
+    if clipping_cfg.get("name") in {"agc", "adagc"} and placement is not ClippingPlacement.PRE_MOMENT:
+        raise ValueError("AGC and AdaGC are defined only for pre-moment placement")
+
+    episode_cfg = dict(logging_cfg.get("episode", {}))
+    episode_tracker = ClippingEpisodeTracker(
+        HysteresisConfig(
+            on_margin=float(episode_cfg.get("on_margin", 0.05)),
+            off_margin=float(episode_cfg.get("off_margin", 0.05)),
+            min_dwell_steps=int(episode_cfg.get("min_dwell_steps", 3)),
+        )
+    )
+    history_tracker = DynamicsHistory(
+        window=int(logging_cfg.get("history_window", 100)),
+        beta=float(logging_cfg.get("exposure_beta", 0.95)),
     )
 
-    if cfg["optimizer"] == "adamw":
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=cfg["lr"], weight_decay=cfg.get("weight_decay", 0.0)
+    total_dimension = sum(parameter.numel() for parameter in parameters)
+    sketcher = GradientSketcher(
+        total_dimension,
+        int(logging_cfg.get("gradient_sketch_size", 64)),
+        seed + 101,
+        device,
+    )
+    previous_gradient_sketch: torch.Tensor | None = None
+    previous_probe_gradient_sketch: torch.Tensor | None = None
+    fixed_probe_batch = next(iter(bundle.probe_loader))
+
+    run_id = str(cfg.get("run_id", f"run-{config_hash(cfg)}-seed{seed}"))
+    start_epoch = 0
+    global_step = 0
+    resume_path = checkpoint_cfg.get("resume_from")
+    recorder = None
+    if cfg.get("output_dir"):
+        recorder = RunRecorder(
+            cfg["output_dir"],
+            run_id,
+            cfg,
+            append_existing=bool(resume_path),
         )
-    else:
-        optimizer = torch.optim.SGD(
-            model.parameters(),
-            lr=cfg["lr"],
-            momentum=cfg.get("momentum", 0.0),
-            weight_decay=cfg.get("weight_decay", 0.0),
+    if resume_path:
+        position, payload = load_checkpoint(
+            resume_path,
+            model=model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            policy=policy,
+            sampler=bundle.train_sampler,
+            episode_tracker=episode_tracker,
+            history_tracker=history_tracker,
+            map_location=device,
         )
+        start_epoch = position.epoch
+        global_step = position.global_step
+        previous = payload.get("metadata", {}).get("previous_gradient_sketch")
+        if isinstance(previous, torch.Tensor):
+            previous_gradient_sketch = previous.to(device)
+        previous_probe = payload.get("metadata", {}).get("previous_probe_gradient_sketch")
+        if isinstance(previous_probe, torch.Tensor):
+            previous_probe_gradient_sketch = previous_probe.to(device)
 
-    loss_fn = nn.CrossEntropyLoss()
-    clip_cfg = cfg["clipping"]
-    clip_name = clip_cfg.get("name", "none")
-
-    dagc: DynamicsAwareClipping | None = None
-    fixed_threshold: float | None = clip_cfg.get("threshold") if clip_name == "fixed" else None
-    if clip_name == "dagc":
-        dagc = DynamicsAwareClipping(
-            gamma=clip_cfg.get("gamma", 0.05),
-            beta=clip_cfg.get("beta", 0.9),
-            relax=clip_cfg.get("relax", 0.3),
-            init_c=clip_cfg.get("init_c", 1.0),
-        )
-        fixed_threshold = None
-
-    # diagnostics
-    log: dict[str, list] = {
-        "loss": [], "grad_norm": [], "coeff": [], "update_norm": [],
-        "alignment": [], "exposure": [], "signed": [], "threshold": [],
-    }
-    proj_dim = cfg.get("projection_dim", 4)
-    # random projection basis for gradient directions (fixed across run)
-    model_d = sum(p.numel() for p in model.parameters())
-    proj = torch.randn(proj_dim, model_d, device=device) / (model_d ** 0.5)
-    grad_proj: list[np.ndarray] = []
-    switch_count = 0
-    s_prev: float | None = None
-
-    def hessian_loss_fn(batch) -> Tensor:
-        xb, yb = batch
-        xb, yb = xb.to(device), yb.to(device)
-        out = model(xb)
-        return loss_fn(out, yb)
-
-    g_prev: Tensor | None = None
-    steps = 0
-    hessian_epochs = set(cfg.get("hessian_epochs", []))
-    hessian_evals: list[tuple[int, float]] = []
+    rows: list[dict[str, Any]] = []
+    hessian_records: list[dict[str, float | int | str]] = []
+    hessian_epochs = {int(value) for value in logging_cfg.get("hessian_checkpoints", [])}
+    checkpoint_steps = {int(value) for value in checkpoint_cfg.get("steps", [])}
+    checkpoint_every_epochs = int(checkpoint_cfg.get("every_epochs", 0))
+    checkpoint_dir = Path(checkpoint_cfg.get("directory", "results/checkpoints"))
+    failed = False
+    failure_reason = ""
 
     model.train()
-    for epoch in range(cfg["epochs"]):
-        for x, y in train_loader:
-            x, y = x.to(device), y.to(device)
-            optimizer.zero_grad()
-            out = model(x)
-            loss = loss_fn(out, y)
+    for epoch in range(start_epoch, epochs):
+        for inputs, targets in bundle.train_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            logits = model(inputs)
+            loss = loss_fn(logits, targets)
+            if not torch.isfinite(loss):
+                failed = True
+                failure_reason = "non_finite_loss"
+                break
             loss.backward()
 
-            gcat = _flatten_grads(model)
-            gn = float(torch.norm(gcat))
-            a = 1.0 if g_prev is None else gradient_alignment(gcat, g_prev)
-            g_prev = gcat
+            raw_gradient = flatten_gradients(parameters)
+            raw_grad_norm = float(torch.linalg.vector_norm(raw_gradient))
+            gradient_sketch = sketcher(raw_gradient)
+            alignment = (
+                math.nan
+                if previous_gradient_sketch is None
+                else gradient_alignment(gradient_sketch, previous_gradient_sketch)
+            )
+            previous_gradient_sketch = gradient_sketch.detach().clone()
+            state_metrics = optimizer_state_metrics(parameters, optimizer)
+            mismatch = state_metrics["adam_second_moment_mismatch"]
+            context = PolicyContext(
+                step=global_step,
+                grad_norm=raw_grad_norm,
+                loss=float(loss.detach()),
+                alignment=alignment,
+                moment_mismatch=mismatch,
+            )
+            decision = policy.decide(context)
 
-            # clipping policy
-            if clip_name == "none":
-                coeff = 1.0
-                c_used = float("inf")
-            elif clip_name == "fixed":
-                coeff = float(clipping_coefficient(torch.tensor(gn), fixed_threshold))
-                c_used = fixed_threshold
-            else:  # dagc
-                assert dagc is not None
-                dagc.update(gn, a)
-                c_used = dagc.c
-                coeff = dagc.clip_coefficient(gn)
+            before = snapshot_parameters(parameters)
+            if clipping_cfg.get("name") == "agc":
+                coefficient = apply_agc_(
+                    parameters,
+                    clip_value=float(clipping_cfg.get("clip_value", 0.01)),
+                    eps=float(clipping_cfg.get("eps", 1e-3)),
+                )
+                decision = ClipDecision(
+                    coefficient=coefficient,
+                    threshold=coefficient * raw_grad_norm if coefficient < 1.0 else math.inf,
+                    active=coefficient < 1.0,
+                    source="agc",
+                )
+            elif clipping_cfg.get("name") == "adagc":
+                if not isinstance(policy, AdaGCPolicy):
+                    raise TypeError("AdaGC configuration did not build an AdaGC policy")
+                coefficient = policy.apply_(parameters, raw_grad_norm)
+                decision = ClipDecision(
+                    coefficient=coefficient,
+                    threshold=coefficient * raw_grad_norm if coefficient < 1.0 else math.inf,
+                    active=coefficient < 1.0,
+                    source="adagc",
+                )
+            elif placement is ClippingPlacement.PRE_MOMENT:
+                scale_gradients_(parameters, decision.coefficient)
 
-            _apply_coefficient(model, coeff)
+            applied_grad_norm = gradient_norm(parameters)
             optimizer.step()
+            proposed_update_norm = parameter_update_norm(parameters, before)
+            if placement is ClippingPlacement.POST_UPDATE:
+                update_application = apply_post_update_decision_(
+                    parameters,
+                    before,
+                    decision,
+                    allow_enlarge=bool(clipping_cfg.get("allow_enlarge", False)),
+                )
+                applied_update_norm = update_application.applied_update_norm
+                applied_coefficient = update_application.coefficient
+            else:
+                applied_update_norm = proposed_update_norm
+                applied_coefficient = decision.coefficient
+            applied_active = applied_coefficient < 1.0 - 1e-12
 
-            e = float(clipping_indicator(torch.tensor(gn), c_used if c_used != float("inf") else float("inf") + 1))
-            upd_norm = float(torch.norm(torch.cat([p.grad.detach().reshape(-1) for p in model.parameters() if p.grad is not None]))) if coeff < 1 else gn * coeff
-            s_t = gn / (c_used + 1e-12) - 1.0
-            if s_prev is not None and s_t * s_prev < 0:
-                switch_count += 1
-            s_prev = s_t
+            threshold = decision.threshold
+            if math.isfinite(threshold) and threshold > 0.0:
+                q = raw_grad_norm / threshold
+            elif decision.active and applied_coefficient > 0.0:
+                q = 1.0 / applied_coefficient
+            else:
+                q = 0.0
+            episode = episode_tracker.update(q, global_step)
+            history = history_tracker.update(episode, 1.0 - min(1.0, applied_coefficient))
+            learning_rate = float(optimizer.param_groups[0]["lr"])
+            row: dict[str, Any] = {
+                **decision.to_dict(),
+                "epoch": epoch,
+                "step": global_step,
+                "loss": float(loss.detach()),
+                "learning_rate": learning_rate,
+                "raw_grad_norm": raw_grad_norm,
+                "applied_grad_norm": applied_grad_norm,
+                "proposed_update_norm": proposed_update_norm,
+                "applied_update_norm": applied_update_norm,
+                "coefficient": applied_coefficient,
+                "active": applied_active,
+                "threshold": threshold,
+                "clipping_coordinate": q,
+                "placement": placement.value,
+                "gradient_alignment": alignment,
+                **state_metrics,
+                **episode.to_dict(),
+                **history.to_dict(),
+            }
+            if bool(logging_cfg.get("save_gradient_sketch", False)):
+                row["gradient_sketch"] = gradient_sketch.detach().cpu()
+            rows.append(row)
+            if recorder is not None:
+                recorder.append_step(row)
 
-            log["loss"].append(float(loss.item()))
-            log["grad_norm"].append(gn)
-            log["coeff"].append(coeff)
-            log["update_norm"].append(upd_norm)
-            log["alignment"].append(a)
-            log["exposure"].append(dagc.E if dagc is not None else e)
-            log["signed"].append(s_t)
-            log["threshold"].append(c_used if np.isfinite(c_used) else np.nan)
+            global_step += 1
+            if global_step in checkpoint_steps:
+                payload = build_checkpoint(
+                    model=model,
+                    optimizer=optimizer,
+                    scheduler=scheduler,
+                    policy=policy,
+                    sampler=bundle.train_sampler,
+                    episode_tracker=episode_tracker,
+                    history_tracker=history_tracker,
+                    epoch=epoch,
+                    global_step=global_step,
+                    config=cfg,
+                    metadata={
+                        "previous_gradient_sketch": previous_gradient_sketch.detach().cpu(),
+                        "previous_probe_gradient_sketch": (
+                            None
+                            if previous_probe_gradient_sketch is None
+                            else previous_probe_gradient_sketch.detach().cpu()
+                        ),
+                    },
+                )
+                save_checkpoint(checkpoint_dir / f"{run_id}.step-{global_step}.pt", payload)
 
-            gp = (gcat.reshape(1, -1) @ proj.t()).reshape(-1).cpu().numpy()
-            grad_proj.append(gp)
+        if failed:
+            break
 
-            steps += 1
-
-        # Hessian top eigenvalue at checkpoint epochs
         if epoch in hessian_epochs:
-            batch = next(iter(train_loader))
-            lam = top_eigenvalue(hessian_loss_fn, [p for p in model.parameters() if p.requires_grad], batch, power_iters=12)
-            hessian_evals.append((epoch, lam))
+            training = model.training
+            model.eval()
 
-        if verbose:
-            mean_loss = float(np.mean(log["loss"][-len(train_loader):]))
-            print(f"  epoch {epoch + 1}/{cfg['epochs']}  loss {mean_loss:.4f}  "
-                  f"steps {steps}", flush=True)
+            def probe_loss(batch) -> torch.Tensor:
+                probe_inputs, probe_targets = batch
+                return loss_fn(model(probe_inputs.to(device)), probe_targets.to(device))
 
-    # evaluation
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for x, y in test_loader:
-            x, y = x.to(device), y.to(device)
-            pred = model(x).argmax(dim=1)
-            correct += (pred == y).sum().item()
-            total += y.size(0)
-    test_acc = correct / max(total, 1)
+            probe_value = probe_loss(fixed_probe_batch)
+            probe_gradients = torch.autograd.grad(
+                probe_value,
+                parameters,
+                retain_graph=False,
+                allow_unused=True,
+            )
+            probe_flat = torch.cat(
+                [
+                    (torch.zeros_like(parameter) if gradient is None else gradient)
+                    .detach()
+                    .reshape(-1)
+                    for parameter, gradient in zip(parameters, probe_gradients)
+                ]
+            )
+            probe_gradient_sketch = sketcher(probe_flat)
+            probe_alignment = (
+                math.nan
+                if previous_probe_gradient_sketch is None
+                else gradient_alignment(probe_gradient_sketch, previous_probe_gradient_sketch)
+            )
+            previous_probe_gradient_sketch = probe_gradient_sketch.detach().clone()
+            eigenvalue = top_eigenvalue(
+                probe_loss,
+                parameters,
+                fixed_probe_batch,
+                power_iters=int(logging_cfg.get("hessian_power_iterations", 20)),
+            )
+            hessian_records.append(
+                {
+                    "epoch": epoch,
+                    "step": global_step,
+                    "top_eigenvalue": eigenvalue,
+                    "probe_loss": float(probe_value.detach()),
+                    "probe_gradient_norm": float(torch.linalg.vector_norm(probe_flat)),
+                    "probe_gradient_alignment": probe_alignment,
+                    "scope": "fixed_probe_batch",
+                }
+            )
+            model.train(training)
 
-    # aggregate diagnostics
-    gp_arr = np.array(grad_proj)
-    from src.oscillation import dominant_frequency, one_step_alignment, two_step_alignment
+        if scheduler is not None:
+            scheduler.step()
 
-    c1 = one_step_alignment(gp_arr)
-    c2 = two_step_alignment(gp_arr)
+        if checkpoint_every_epochs > 0 and (epoch + 1) % checkpoint_every_epochs == 0:
+            payload = build_checkpoint(
+                model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                policy=policy,
+                sampler=bundle.train_sampler,
+                episode_tracker=episode_tracker,
+                history_tracker=history_tracker,
+                epoch=epoch + 1,
+                global_step=global_step,
+                config=cfg,
+                metadata={
+                    "previous_gradient_sketch": previous_gradient_sketch.detach().cpu(),
+                    "previous_probe_gradient_sketch": (
+                        None
+                        if previous_probe_gradient_sketch is None
+                        else previous_probe_gradient_sketch.detach().cpu()
+                    ),
+                },
+            )
+            save_checkpoint(checkpoint_dir / f"{run_id}.epoch-{epoch + 1}.pt", payload)
 
-    summary = {
-        "policy": clip_name,
-        "test_acc": test_acc,
-        "final_loss": log["loss"][-1],
-        "mean_loss": float(np.mean(log["loss"][-200:])),
-        "f_clip": float(np.mean([1.0 if np.isfinite(t) and gn > t else 0.0 for gn, t in zip(log["grad_norm"], log["threshold"])])) if clip_name != "none" else 0.0,
-        "i_clip": float(np.mean(np.clip(1.0 - np.array(log["threshold"]) / (np.array(log["grad_norm"]) + 1e-12), 0, None))) if clip_name != "none" else 0.0,
-        "n_switch": switch_count,
-        "mean_c1": float(np.mean(c1)),
-        "mean_c2": float(np.mean(c2)),
-        "loss_dom_freq": dominant_frequency(log["loss"]),
-        "gn_dom_freq": dominant_frequency(log["grad_norm"]),
-        "hessian_evals": hessian_evals,
-        "max_grad_norm": float(np.max(log["grad_norm"])),
-        "median_grad_norm": float(np.median(log["grad_norm"])),
-        "log": log,
+        if verbose and rows:
+            epoch_losses = [row["loss"] for row in rows if row["epoch"] == epoch]
+            print(
+                f"epoch {epoch + 1}/{epochs} loss={np.mean(epoch_losses):.5f} step={global_step}",
+                flush=True,
+            )
+
+    evaluation = evaluate(model, bundle.test_loader, loss_fn, device) if not failed else {
+        "loss": math.nan,
+        "accuracy": math.nan,
     }
+    active = [float(row["active"]) for row in rows]
+    summary: dict[str, Any] = {
+        "run_id": run_id,
+        "config_hash": config_hash(cfg),
+        "seed": seed,
+        "dataset": str(dataset_cfg.get("name", "cifar10")),
+        "model": str(model_cfg.get("name", "resnet18")),
+        "optimizer": str(optimizer_cfg.get("name", "sgd")),
+        "learning_rate": float(optimizer_cfg.get("lr", 0.1)),
+        "clipping_policy": str(clipping_cfg.get("name", "none")),
+        "clipping_threshold": clipping_cfg.get("threshold"),
+        "placement": placement.value,
+        "failed": failed,
+        "failure_reason": failure_reason,
+        "completed_steps": global_step,
+        "test_loss": evaluation["loss"],
+        "test_accuracy": evaluation["accuracy"],
+        "final_train_loss": rows[-1]["loss"] if rows else math.nan,
+        "clipping_frequency": float(np.mean(active)) if active else 0.0,
+        "mean_clipping_intensity": (
+            float(np.mean([1.0 - float(row["coefficient"]) for row in rows])) if rows else 0.0
+        ),
+        "episode_transitions": episode_tracker.switch_count,
+        "episode_count": episode_tracker.episode_id,
+        "hessian_records": hessian_records,
+    }
+    if bool(cfg.get("return_step_rows", False)):
+        summary["rows"] = rows
+    if recorder is not None:
+        recorder.write_summary(summary)
     return summary
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run one declared clipping experiment")
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="override a nested value, for example optimizer.lr=0.2",
+    )
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args()
+    config = load_config(args.config)
+    for override in args.set:
+        key, value = parse_override(override)
+        set_dotted(config, key, value)
+    train_run(config, verbose=args.verbose)
+
+
+if __name__ == "__main__":
+    main()

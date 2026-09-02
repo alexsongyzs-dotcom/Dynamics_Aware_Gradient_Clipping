@@ -1,9 +1,15 @@
-# A2: learning-rate--clipping phase diagram sweep
+# P1 screening sweep. The runner prints a plan unless --execute is explicit.
 sweep:
-  name: phase_diagram
+  name: p1_phase_diagram_screen
+  base_config: ../experiments/p1_screen.yaml
   grid:
-    lr: [0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1.6]
-    clipping_threshold: [0.1, 0.3, 1.0, 3.0, 10.0, inf]
-  metrics: [convergence, test_acc, exposure, switching_count, oscillation_score, curvature, update_norm]
-  seeds: [0, 1, 2, 3, 4]
-  load_bearing: true
+    optimizer.lr: [0.05, 0.1, 0.2, 0.4, 0.8]
+    clipping.threshold: [0.1, 0.3, 1.0, 3.0, 10.0]
+  seeds: [0, 1]
+  output_root: results/sweeps/p1_phase_diagram_screen
+  metrics:
+    - failed
+    - test_accuracy
+    - clipping_frequency
+    - mean_clipping_intensity
+    - episode_transitions

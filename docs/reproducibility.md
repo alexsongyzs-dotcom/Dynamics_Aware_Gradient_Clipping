@@ -1,33 +1,67 @@
-# Reproducibility
+# Linux Handoff and Reproducibility
 
-## Environment
+The Windows checkout is a code-only handoff. No training result is claimed
+until the following sequence is completed on Linux.
 
-- Python >= 3.10, PyTorch >= 2.1 (see requirements.txt)
-- One GPU is sufficient for diagnostic-scale experiments (A0-A5);
-  A6-A8 benefit from 2-4 GPUs; A9 requires a larger cluster.
+## 1. Environment and data
 
-## Seeds and statistics
+Use Python 3.10 or newer and a PyTorch build appropriate for the target CUDA
+driver. Create an isolated environment, install `requirements.txt`, place the
+datasets under `data/`, and leave `dataset.download: false` for controlled
+offline runs. Record GPU model, driver, CUDA, PyTorch, torchvision, and package
+lock output with the experiment artifacts.
 
-- Main experiments: at least 5 independent random seeds (trajectory-selection
-  experiments: at least 10 paired seeds).
-- Report mean +/- 95% CI; bootstrap CIs and paired comparisons where
-  appropriate; correct for multiple comparisons when many hypotheses are
-  tested.
-- Training iterations from a single run are NOT independent samples.
-
-## Paired-run protocol (A6/A7)
-
-Two runs share: initialization, minibatch sequence, data augmentation
-randomness, optimizer, learning-rate schedule, and all other stochastic
-seeds. Only the clipping policy differs.
-
-## Reproduce
+## 2. Validate before training
 
 ```bash
-pip install -r requirements.txt
-python scripts/run_sweep.py --config configs/sweeps/phase_diagram.yaml   # A2
-python -m src.train clipping=fixed  logging.log_every=1                 # A4/A5
-python -m src.train clipping=dagc   logging.log_every=1                 # A4/A5
+python -m pytest tests
+python scripts/quick_experiment.py
 ```
 
-See `scripts/reproduce.sh` (Linux) or `scripts/reproduce.ps1` (Windows).
+The second command only writes three small P0 configs. Review them, then use
+`--execute` for the smoke runs. Do not continue if the unit tests, checkpoint
+resume comparison, or P0 measurement identities fail.
+
+## 3. Screening
+
+```bash
+python scripts/run_sweep.py --config configs/sweeps/phase_diagram.yaml
+python scripts/run_sweep.py --config configs/sweeps/phase_diagram.yaml --execute
+```
+
+The first command materializes and records the full plan; it does not train.
+The second is the explicit execution step. Screening uses `num_workers: 0` so
+the sampler and augmentation RNG can be reproduced exactly in paired work.
+
+## 4. Causal branches
+
+After a reference run completes, generate branch inputs without training:
+
+```bash
+python scripts/prepare_branches.py \
+  --reference-steps results/p2_causal_reference/<run>.steps.jsonl \
+  --shuffle-seed 1000 \
+  --output results/branches/seed-1000
+```
+
+Inspect `branch_manifest.json` and verify the sequence hashes and invariants.
+Run each generated YAML through `python -m src.train --config <file>` only
+after G1 and G2 have passed.
+
+## 5. Safety-gated convenience entrypoint
+
+```bash
+DAGC_EXECUTE=1 bash scripts/reproduce.sh
+```
+
+Without the environment switch, the script exits before tests or training.
+It intentionally stops after P1 and asks for gate review rather than launching
+causal or event-timed experiments automatically.
+
+## Statistical identity
+
+Independent seeds are the unit of inference. Paired branches share checkpoint,
+seed, minibatch order, and RNG state. Report configuration hashes, checkpoint
+paths, sequence hashes, all failures, paired effects with uncertainty, and the
+preregistered multiple-comparison correction. Never report step count as the
+sample size.

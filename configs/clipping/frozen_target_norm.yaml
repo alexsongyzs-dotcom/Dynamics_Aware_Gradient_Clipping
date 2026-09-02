@@ -1,0 +1,5 @@
+name: frozen_target_norm
+sequence_path: results/branches/intervention_sequences.json
+field: reference_applied_update_norm
+repeat_last: false
+placement: post_update

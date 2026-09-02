@@ -1,6 +1,6 @@
 # CIFAR-10 dataset
 name: cifar10
-download: true
+download: false
 data_dir: ${oc.env:DAGC_DATA_DIR,data}
 normalize: true
 augmentation: standard   # random crop + flip

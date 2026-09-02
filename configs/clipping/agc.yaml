@@ -1,4 +1,4 @@
-# Adaptive gradient clipping (Brock et al. 2021, baseline)
 name: agc
 eps: 1e-3
 clip_value: 0.01
+placement: pre_moment

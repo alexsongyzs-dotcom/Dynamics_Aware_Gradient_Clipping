@@ -1,0 +1,8 @@
+base_config: ../../default.yaml
+run_id: baseline-autoclip
+clipping:
+  name: autoclip
+  percentile: 10.0
+  window: 1000
+  warmup: 20
+  placement: pre_moment

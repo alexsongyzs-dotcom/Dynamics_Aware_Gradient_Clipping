@@ -1,6 +1,6 @@
-# Small Vision Transformer (experimental)
 name: vit_small
-patch_size: 16
+patch_size: 4
 embed_dim: 384
 depth: 12
-num_heads: 6
+heads: 6
+dropout: 0.0

@@ -1,0 +1,6 @@
+base_config: ../../default.yaml
+run_id: baseline-fixed
+clipping:
+  name: fixed
+  threshold: 1.0
+  placement: pre_moment

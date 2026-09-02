@@ -1,0 +1,9 @@
+base_config: ../default.yaml
+run_id: p2-causal-reference
+epochs: 90
+output_dir: results/p2_causal_reference
+logging:
+  save_gradient_sketch: true
+  hessian_checkpoints: [0, 10, 30, 60, 89]
+checkpointing:
+  every_epochs: 5

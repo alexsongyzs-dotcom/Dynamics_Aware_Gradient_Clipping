@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Reproduce the load-bearing experiments (A2, A4, A5, A6, A7).
+# Linux entrypoint for the gated P0-P3 workflow.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-python scripts/run_sweep.py --config configs/sweeps/phase_diagram.yaml
-# A4/A5: single runs with full dynamical logging
-python -m src.train clipping=fixed logging.log_every=1
-python -m src.train clipping=dagc logging.log_every=1
-# A6/A7: paired runs (see docs/experiments_A0_A9.md for the pairing protocol)
-echo "See docs/experiments_A0_A9.md for A6/A7 paired-run instructions."
+if [[ "${DAGC_EXECUTE:-0}" != "1" ]]; then
+  echo "Safety stop: set DAGC_EXECUTE=1 on the Linux training host."
+  exit 2
+fi
+
+python -m pytest tests
+python -m src.train --config configs/experiments/p0_measurement.yaml --verbose
+python scripts/run_sweep.py --config configs/sweeps/phase_diagram.yaml --execute
+echo "Inspect G0-G2 before preparing P2 causal branches; see docs/experiments_A0_A9.md."
