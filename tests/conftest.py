@@ -1,18 +1,9 @@
-"""Pytest configuration.
+"""Test configuration: import the repository packages from a source checkout."""
 
-While the project is a skeleton, tests document the expected behavior of
-not-yet-implemented functions. Any test that hits a NotImplementedError stub
-is skipped (reported as 's'), keeping CI green; once functions are
-implemented the tests run for real.
-"""
-
-import pytest
+from pathlib import Path
+import sys
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_call(item):  # pragma: no cover
-    outcome = yield
-    try:
-        outcome.get_result()
-    except NotImplementedError:
-        pytest.skip("Not implemented yet (skeleton)")
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))

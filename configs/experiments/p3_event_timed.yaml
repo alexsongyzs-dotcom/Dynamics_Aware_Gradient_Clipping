@@ -1,0 +1,9 @@
+base_config: ../default.yaml
+run_id: p3-event-timed-contingent
+clipping:
+  name: event_timed
+  aggressiveness: 0.5
+  window: 200
+  warmup: 50
+  min_dwell_steps: 5
+  placement: pre_moment

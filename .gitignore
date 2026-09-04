@@ -10,9 +10,7 @@ venv/
 
 # Data and results (too large / generated)
 data/
-results/raw/
-results/aggregated/
-results/checkpoints/
+results/
 *.pt
 *.pth
 *.ckpt

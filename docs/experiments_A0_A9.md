@@ -1,64 +1,93 @@
-# Experimental Program A0-A9
+# Gated Experimental Program (supersedes A0-A9)
 
-Load-bearing experiments (determine the paper's central claims):
-**A2, A4, A5, A6, A7**. A9 is contingent.
+The filename is retained for compatibility, but the old linear A0-A9 program
+is replaced by gates G0-G3 and phases P0-P5. A later phase cannot be treated as
+confirmatory until the earlier gate has passed.
 
-## A0 — Instrumentation and reproducibility validation
-Validate all dynamical measurements and the experimental infrastructure.
-Not a main scientific result.
+## P0 — Measurement and replay validation (G0)
 
-## A1 — Local stability threshold in neural networks
-Hypothesis: training dynamics change systematically as eta_t * lambda_max(H_t)
-approaches/exceeds the classical stability scale (S_t ~ 2).
-Questions: does clipping (a) alter the frequency of unstable excursions,
-(b) reduce overshoot after high-curvature encounters, (c) change time spent
-above the boundary, (d) redirect the trajectory?
+Validate on a tiny deterministic problem before any scientific sweep:
 
-## A2 — Learning-rate--clipping phase diagram
-Dense (eta, c) sweep; per configuration measure convergence, test
-performance, clipping exposure, switching count, oscillation score,
-curvature, update magnitude. Main visualization: neural training dynamical
-phase diagram.
+1. raw gradient norm equals a direct tensor calculation;
+2. applied gradient norm equals the declared pre-moment coefficient;
+3. proposed and applied update norms are distinct for post-update controls;
+4. vanilla-SGD norm matching is numerically identical to global clipping;
+5. checkpoints reproduce the next minibatches, RNG draws, optimizer state,
+   policy state, event state, and logged rows;
+6. event labels contain no future-derived input features.
 
-## A3 — Clipping exposure
-Compare F_clip, I_clip, burst length, first exposure time, early exposure.
-Which statistics best predict optimization and generalization?
+Failing G0 invalidates all downstream evidence.
 
-## A4 — Switching geometry along training trajectories
-Windows around s_t s_{t+1} < 0; measure changes in L_t, ||g_t||,
-||dtheta_t||, S_t, C_1(t). Is repeated switching associated with a
-reproducible local signature?
+## P1 — Screening and predictive increment (G1)
 
-## A5 — Oscillatory and alternating dynamics
-C_1(t), C_2(t), R_2(t), autocorrelation (loss, gradient norm, update
-direction), spectral concentration, switching-conditioned oscillation.
-Does clipping suppress, amplify, or reorganize oscillatory regimes?
+Use two seeds over a coarse learning-rate and threshold grid. Record failures,
+loss, accuracy, raw/applied norms, exposure, episode count, burst length,
+directional diagnostics, and checkpoint curvature. Recompute events over the
+preregistered hysteresis grid and compare to block/circular surrogates.
 
-## A6 — Controlled trajectory selection
-Paired runs, identical everything except clipping policy. Small delta-c
-perturbations; early-only vs late-only vs full vs none. Track divergence in
-parameter space, prediction space, representation space, final curvature,
-final generalization. **At least 10 paired seeds (20 where feasible).**
-Final solutions judged functionally different via:
-linear mode connectivity barrier, CKA, calibration/subgroup differences,
-held-out disagreement rates.
+Episode structure must first be reproducible over seeds and robust to detector
+settings and surrogates. Then construct a future adverse-event target
+separately within each run. Compare:
 
-## A7 — Matched-update causal controls
-Rule out "clipping just reduces step size". Two concrete controls:
-1. **norm-matched scaling**: rescale the raw update to the clipped norm at
-   every step (destroys state dependence, matches step sizes);
-2. **random gating**: Bernoulli gating at the empirical clipping frequency
-   (preserves frequency, destroys timing).
-Compare optimization performance, switching, oscillation, curvature,
-trajectory selection.
+- Base: instantaneous loss, raw gradient norm, learning rate, and optimizer
+  state variables;
+- Base+History: Base plus exposure EMA, duty cycle, switch rate, burst age,
+  time since transition, and mean clipping intensity.
 
-## A8 — Dynamics-aware gradient clipping (DAGC)
-Controller selected after A1-A7. Baselines: no clipping, fixed global norm,
-tuned fixed, AGC, noise-scale adaptive clipping, SAM, normalized-update
-controls, matched-update controls. Primary outcomes: final test performance,
-optimization speed, training stability, clipping exposure, learning-rate
-robustness, clipping-hyperparameter robustness, computational overhead.
+Use whole-run grouped cross-validation. Primary increment is held-out AUPRC;
+also report AUROC, Brier score, and log loss. Training steps are never treated
+as independent statistical replicates. G1 passes only if at least one history
+feature has stable incremental value across held-out runs/configurations.
 
-## A9 — Large-scale validation (contingent)
-Run only if A1-A8 support the central claims. ImageNet-scale is optional;
-may be downgraded to a moderately larger vision model if compute is limited.
+## P2 — Causal timing and placement branches (G2)
+
+Fork from complete checkpoints with identical model, optimizer, scheduler,
+sampler, augmentation RNG, policy state, and minibatch order. Compare:
+
+1. reference gain replay before optimizer state;
+2. globally time-shuffled gains;
+3. block-shuffled gains;
+4. random locations with the same active-gain multiset;
+5. reference applied-update norm imposed after optimizer state.
+
+Before training any branch, verify sequence length, sorted gain multiset, sum,
+and active-step count. Primary outcomes must be preregistered: failure,
+short-horizon loss change, trajectory divergence, and optimizer-state change.
+Use paired seed/checkpoint estimates with paired confidence intervals.
+
+G2 passes only if a timing or placement intervention changes a preregistered
+functional/stability outcome, not parameter distance alone.
+
+## P3 — Predictor freeze and contingent controller (G3)
+
+Freeze the 1-2 signals that survive grouped validation, then evaluate the
+single-aggressiveness `event_timed` policy against no clipping, fixed global
+clipping, AutoClip, AGC, AdaGC, and StableAdamW. G3 requires a stability benefit
+with non-inferiority on the remaining primary outcomes; a single accuracy gain
+is insufficient.
+
+## P4 — Trajectory, confirmation, and scale
+
+For supported P3 effects, compare prediction disagreement, symmetric KL,
+calibration, CKA on a fixed probe set, linear mode-connectivity barrier, final
+curvature, and held-out accuracy. Parameter distance alone is insufficient to
+claim a different solution.
+
+Only after G3 passes, expand selected cells to confirmatory seeds and at most
+one larger-scale task. Report wall-clock, memory, communication, and failed-run
+costs.
+
+## P5 — Freeze and writing
+
+Freeze the event definition, primary outcomes, tables, configs, and anonymous
+reproduction snapshot. Preserve all failed and negative runs.
+
+## Seed policy and multiplicity
+
+- screening: two seeds;
+- confirmatory comparisons: at least five independent seeds;
+- trajectory-selection and paired causal tests: at least ten pairs when
+  feasible;
+- family-wise exploration is labeled exploratory; confirmatory families use
+  Benjamini-Hochberg adjustment;
+- report run-level failure rates as first-class outcomes.

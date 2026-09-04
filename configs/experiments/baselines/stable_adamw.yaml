@@ -1,0 +1,12 @@
+base_config: ../../default.yaml
+run_id: baseline-stable-adamw
+optimizer:
+  name: stable_adamw
+  lr: 0.001
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  weight_decay: 0.05
+  schedule: cosine
+clipping:
+  name: none
+  placement: pre_moment

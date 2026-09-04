@@ -1,0 +1,9 @@
+base_config: ../../default.yaml
+run_id: baseline-adagc
+clipping:
+  name: adagc
+  relative_threshold: 1.04
+  beta: 0.99
+  warmup_steps: 100
+  warmup_global_threshold: 1.0
+  placement: pre_moment

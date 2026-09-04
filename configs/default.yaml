@@ -1,19 +1,49 @@
-# Default Hydra configuration (experiment A0: instrumentation validation)
-defaults:
-  - datasets: cifar10
-  - models: resnet18
-  - optimizers: sgd
-  - clipping: fixed
-  - _self_
-
+# Standalone baseline configuration. No command is run by loading this file.
 seed: 0
 device: cuda
+deterministic: true
 epochs: 90
 batch_size: 128
-num_workers: 4
+num_workers: 0
+pin_memory: true
+output_dir: results/runs
+
+dataset:
+  name: cifar10
+  data_dir: data
+  download: false
+
+model:
+  name: resnet18
+
+optimizer:
+  name: sgd
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 0.0005
+  nesterov: true
+  schedule: cosine
+
+clipping:
+  name: fixed
+  threshold: 1.0
+  placement: pre_moment
 
 logging:
-  log_every: 10
+  probe_size: 1024
+  gradient_sketch_size: 64
+  save_gradient_sketch: true
+  history_window: 100
+  exposure_beta: 0.95
+  episode:
+    on_margin: 0.05
+    off_margin: 0.05
+    min_dwell_steps: 3
   hessian_checkpoints: [0, 10, 30, 60, 89]
-  save_trajectory_projections: true
-  projection_dim: 512
+  hessian_power_iterations: 20
+
+checkpointing:
+  directory: results/checkpoints
+  every_epochs: 10
+  steps: []
+  resume_from: null

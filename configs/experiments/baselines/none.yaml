@@ -1,0 +1,5 @@
+base_config: ../../default.yaml
+run_id: baseline-none
+clipping:
+  name: none
+  placement: pre_moment
