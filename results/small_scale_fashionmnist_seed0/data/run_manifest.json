@@ -1,0 +1,16 @@
+{
+  "experiment": "quick_experiment",
+  "dataset": "FashionMNIST",
+  "model": "small_cnn",
+  "seed": 0,
+  "epochs": 10,
+  "batch_size": 256,
+  "optimizer": "SGD",
+  "learning_rate": 0.1,
+  "momentum": 0.9,
+  "weight_decay": 0.0001,
+  "fixed_threshold": 0.6276,
+  "fixed_threshold_source": "3-epoch no-clipping probe median gradient norm",
+  "policies": ["none", "fixed", "dagc"],
+  "hessian_result_status": "invalid_all_reported_eigenvalues_zero"
+}

@@ -1,0 +1,4 @@
+policy,test_accuracy,mean_train_loss,clip_frequency,clip_intensity,switch_count,mean_c1,mean_c2,loss_dominant_frequency
+none,0.9100,0.1416,0.000,0.000,0,0.160,0.028,0.0004
+fixed,0.9132,0.1077,0.603,0.152,924,0.196,-0.015,0.0004
+dagc,0.9159,0.1049,0.081,0.038,47,0.161,-0.012,0.0004

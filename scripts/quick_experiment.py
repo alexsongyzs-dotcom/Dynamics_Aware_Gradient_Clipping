@@ -43,7 +43,6 @@ def base_cfg(seed: int, epochs: int) -> dict:
         "seed": seed,
         "device": "cuda",
         "projection_dim": 4,
-        "hessian_epochs": [0, max(1, epochs // 3), max(2, 2 * epochs // 3), epochs - 1],
     }
 
 
@@ -90,13 +89,6 @@ def main() -> None:
         print(f"{name:<8} {r['test_acc']*100:>8.2f}% {r['mean_loss']:>9.4f} "
               f"{r['f_clip']:>7.3f} {r['i_clip']:>7.3f} {r['n_switch']:>9d} "
               f"{r['mean_c1']:>8.3f} {r['mean_c2']:>8.3f} {r['loss_dom_freq']:>9.4f}")
-
-    for name in ["none", "fixed", "dagc"]:
-        r = results[name]
-        he = r.get("hessian_evals", [])
-        if he:
-            s = ", ".join(f"e{e}:{lam:.1f}" for e, lam in he)
-            print(f"  [{name}] hessian top eigenvalues: {s}")
 
     # ---- plots ----
     fig, axes = plt.subplots(2, 2, figsize=(13, 9))

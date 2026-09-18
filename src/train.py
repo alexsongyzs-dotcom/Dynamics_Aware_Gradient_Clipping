@@ -1,8 +1,7 @@
 """Training entry point with dynamical diagnostics.
 
 Runs a single training run with configurable model, dataset, optimizer,
-clipping policy, and dynamical logging. Supports Hessian measurements at
-selected checkpoints.
+clipping policy, and lightweight dynamical logging.
 """
 
 from __future__ import annotations
@@ -15,10 +14,9 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from src.clipping import DynamicsAwareClipping, clipping_coefficient, clipping_indicator, clipping_intensity
+from src.clipping import DynamicsAwareClipping, adaptive_gradient_clip_, clipping_coefficient
 from src.data import build_loaders
 from src.dynamics import gradient_alignment
-from src.hessian import top_eigenvalue
 from src.models import build_model
 
 
@@ -49,8 +47,8 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     """Train one configuration; return diagnostics and metrics.
 
     cfg keys: model, dataset, data_dir, epochs, batch_size, lr, momentum,
-    weight_decay, clipping (dict), seed, device, log_every, hessian_epochs,
-    projection_dim (random projections of gradients).
+    weight_decay, clipping (dict), seed, device, log_every, projection_dim
+    (random projections of gradients).
     verbose: print per-epoch progress for live monitoring.
     """
     device = torch.device(cfg.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
@@ -64,6 +62,9 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
         cfg.get("batch_size", 256),
         num_workers=cfg.get("num_workers", 2),
         download=True,
+        train_size=cfg.get("train_size"),
+        test_size=cfg.get("test_size"),
+        subset_seed=cfg["seed"],
     )
 
     if cfg["optimizer"] == "adamw":
@@ -89,6 +90,9 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             gamma=clip_cfg.get("gamma", 0.05),
             beta=clip_cfg.get("beta", 0.9),
             relax=clip_cfg.get("relax", 0.3),
+            osc_weight=clip_cfg.get("osc_weight", 3.0),
+            c_min_scale=clip_cfg.get("c_min_scale", 0.1),
+            c_max_scale=clip_cfg.get("c_max_scale", 10.0),
             init_c=clip_cfg.get("init_c", 1.0),
         )
         fixed_threshold = None
@@ -96,7 +100,7 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     # diagnostics
     log: dict[str, list] = {
         "loss": [], "grad_norm": [], "coeff": [], "update_norm": [],
-        "alignment": [], "exposure": [], "signed": [], "threshold": [],
+        "alignment": [], "exposure": [], "intensity": [], "signed": [], "threshold": [],
     }
     proj_dim = cfg.get("projection_dim", 4)
     # random projection basis for gradient directions (fixed across run)
@@ -106,16 +110,8 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     switch_count = 0
     s_prev: float | None = None
 
-    def hessian_loss_fn(batch) -> Tensor:
-        xb, yb = batch
-        xb, yb = xb.to(device), yb.to(device)
-        out = model(xb)
-        return loss_fn(out, yb)
-
     g_prev: Tensor | None = None
     steps = 0
-    hessian_epochs = set(cfg.get("hessian_epochs", []))
-    hessian_evals: list[tuple[int, float]] = []
 
     model.train()
     for epoch in range(cfg["epochs"]):
@@ -138,18 +134,36 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             elif clip_name == "fixed":
                 coeff = float(clipping_coefficient(torch.tensor(gn), fixed_threshold))
                 c_used = fixed_threshold
-            else:  # dagc
+                _apply_coefficient(model, coeff)
+            elif clip_name == "agc":
+                adaptive_gradient_clip_(
+                    model.parameters(),
+                    clip_value=clip_cfg.get("clip_value", 0.01),
+                    eps=clip_cfg.get("eps", 1e-3),
+                )
+                clipped_norm = float(torch.norm(_flatten_grads(model)))
+                coeff = clipped_norm / (gn + 1e-12)
+                c_used = float("nan")
+            elif clip_name == "dagc":
                 assert dagc is not None
-                dagc.update(gn, a)
                 c_used = dagc.c
                 coeff = dagc.clip_coefficient(gn)
+                _apply_coefficient(model, coeff)
+            else:
+                raise ValueError(f"unknown clipping policy: {clip_name}")
 
-            _apply_coefficient(model, coeff)
+            before = [p.detach().clone() for p in model.parameters() if p.requires_grad]
             optimizer.step()
+            update_sq = sum(float((p.detach() - old).square().sum()) for p, old in zip((p for p in model.parameters() if p.requires_grad), before))
+            upd_norm = update_sq ** 0.5
 
-            e = float(clipping_indicator(torch.tensor(gn), c_used if c_used != float("inf") else float("inf") + 1))
-            upd_norm = float(torch.norm(torch.cat([p.grad.detach().reshape(-1) for p in model.parameters() if p.grad is not None]))) if coeff < 1 else gn * coeff
-            s_t = gn / (c_used + 1e-12) - 1.0
+            # DAGC applies c_t to the current update, then computes c_{t+1}.
+            if dagc is not None:
+                dagc.update(gn, a)
+
+            e = float(coeff < 1.0 - 1e-9)
+            intensity = max(0.0, 1.0 - coeff)
+            s_t = gn / (c_used + 1e-12) - 1.0 if np.isfinite(c_used) else float("nan")
             if s_prev is not None and s_t * s_prev < 0:
                 switch_count += 1
             s_prev = s_t
@@ -159,7 +173,8 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             log["coeff"].append(coeff)
             log["update_norm"].append(upd_norm)
             log["alignment"].append(a)
-            log["exposure"].append(dagc.E if dagc is not None else e)
+            log["exposure"].append(e)
+            log["intensity"].append(intensity)
             log["signed"].append(s_t)
             log["threshold"].append(c_used if np.isfinite(c_used) else np.nan)
 
@@ -167,12 +182,6 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             grad_proj.append(gp)
 
             steps += 1
-
-        # Hessian top eigenvalue at checkpoint epochs
-        if epoch in hessian_epochs:
-            batch = next(iter(train_loader))
-            lam = top_eigenvalue(hessian_loss_fn, [p for p in model.parameters() if p.requires_grad], batch, power_iters=12)
-            hessian_evals.append((epoch, lam))
 
         if verbose:
             mean_loss = float(np.mean(log["loss"][-len(train_loader):]))
@@ -203,14 +212,13 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
         "test_acc": test_acc,
         "final_loss": log["loss"][-1],
         "mean_loss": float(np.mean(log["loss"][-200:])),
-        "f_clip": float(np.mean([1.0 if np.isfinite(t) and gn > t else 0.0 for gn, t in zip(log["grad_norm"], log["threshold"])])) if clip_name != "none" else 0.0,
-        "i_clip": float(np.mean(np.clip(1.0 - np.array(log["threshold"]) / (np.array(log["grad_norm"]) + 1e-12), 0, None))) if clip_name != "none" else 0.0,
+        "f_clip": float(np.mean(log["exposure"])),
+        "i_clip": float(np.mean(log["intensity"])),
         "n_switch": switch_count,
         "mean_c1": float(np.mean(c1)),
         "mean_c2": float(np.mean(c2)),
         "loss_dom_freq": dominant_frequency(log["loss"]),
         "gn_dom_freq": dominant_frequency(log["grad_norm"]),
-        "hessian_evals": hessian_evals,
         "max_grad_norm": float(np.max(log["grad_norm"])),
         "median_grad_norm": float(np.median(log["grad_norm"])),
         "log": log,

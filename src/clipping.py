@@ -46,6 +46,28 @@ def global_norm_clip(grad: Tensor, threshold: float) -> Tensor:
     return grad
 
 
+def adaptive_gradient_clip_(parameters, clip_value: float = 0.01, eps: float = 1e-3) -> None:
+    """Apply unit-wise adaptive gradient clipping in place.
+
+    This is the AGC baseline: each parameter tensor's gradient is bounded by
+    ``clip_value * max(||parameter||, eps)``. Scalars and vectors form one
+    unit; convolutional and matrix weights use one unit per output channel.
+    """
+    for p in parameters:
+        if p.grad is None:
+            continue
+        if p.ndim <= 1:
+            param_norm = p.detach().norm().clamp_min(eps)
+            grad_norm = p.grad.norm()
+        else:
+            dims = tuple(range(1, p.ndim))
+            param_norm = torch.linalg.vector_norm(p.detach(), dim=dims, keepdim=True).clamp_min(eps)
+            grad_norm = torch.linalg.vector_norm(p.grad, dim=dims, keepdim=True)
+        max_norm = param_norm * clip_value
+        scale = (max_norm / grad_norm.clamp_min(1e-12)).clamp(max=1.0)
+        p.grad.mul_(scale)
+
+
 class DynamicsAwareClipping:
     """DAGC bounded multiplicative controller.
 

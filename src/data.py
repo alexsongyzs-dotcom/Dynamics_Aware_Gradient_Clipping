@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 
@@ -15,6 +15,9 @@ def build_loaders(
     batch_size: int = 256,
     num_workers: int = 2,
     download: bool = True,
+    train_size: int | None = None,
+    test_size: int | None = None,
+    subset_seed: int = 0,
 ) -> tuple[DataLoader, DataLoader]:
     """Return (train_loader, test_loader)."""
     root = Path(data_dir)
@@ -44,6 +47,15 @@ def build_loaders(
         test_set = datasets.CIFAR10(root, train=False, transform=te, download=download)
     else:
         raise ValueError(f"unknown dataset: {dataset}")
+
+    if train_size is not None and train_size < len(train_set):
+        generator = torch.Generator().manual_seed(subset_seed)
+        indices = torch.randperm(len(train_set), generator=generator)[:train_size].tolist()
+        train_set = Subset(train_set, indices)
+    if test_size is not None and test_size < len(test_set):
+        generator = torch.Generator().manual_seed(subset_seed + 1)
+        indices = torch.randperm(len(test_set), generator=generator)[:test_size].tolist()
+        test_set = Subset(test_set, indices)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)

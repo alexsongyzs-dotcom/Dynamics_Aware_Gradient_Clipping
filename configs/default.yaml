@@ -14,6 +14,5 @@ num_workers: 4
 
 logging:
   log_every: 10
-  hessian_checkpoints: [0, 10, 30, 60, 89]
   save_trajectory_projections: true
   projection_dim: 512
