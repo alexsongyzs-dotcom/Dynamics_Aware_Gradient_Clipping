@@ -18,6 +18,7 @@ def build_loaders(
     train_size: int | None = None,
     test_size: int | None = None,
     subset_seed: int = 0,
+    loader_seed: int = 0,
 ) -> tuple[DataLoader, DataLoader]:
     """Return (train_loader, test_loader)."""
     root = Path(data_dir)
@@ -57,6 +58,17 @@ def build_loaders(
         indices = torch.randperm(len(test_set), generator=generator)[:test_size].tolist()
         test_set = Subset(test_set, indices)
 
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    # An explicit generator keeps the batch order a function of the loader
+    # seed alone.  Relying on the global RNG is fragile here: the training
+    # loop draws random numbers for the projection basis, so a policy that
+    # consumes a different number of draws could otherwise shift the batch
+    # order and silently break seed-wise pairing across clipping policies.
+    train_loader = DataLoader(
+        train_set,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        generator=torch.Generator().manual_seed(loader_seed),
+    )
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     return train_loader, test_loader

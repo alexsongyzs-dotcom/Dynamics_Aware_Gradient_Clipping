@@ -57,9 +57,36 @@ def a4_plot(rows: list[dict]) -> None:
     plt.close(fig)
 
 
+def high_lr_plot(rows: list[dict]) -> None:
+    groups: dict[tuple[float, str], list[float]] = {}
+    for row in rows:
+        if row["status"] == "complete":
+            groups.setdefault((float(row["lr"]), row["policy"]), []).append(float(row["test_acc"]))
+    lrs = sorted({lr for lr, _ in groups})
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    colors = {"none": "#777777", "fixed": "#4c78a8", "dagc": "#c23b22"}
+    for policy in ("none", "fixed", "dagc"):
+        means = [100 * np.mean(groups[(lr, policy)]) for lr in lrs]
+        cis = [100 * 1.96 * np.std(groups[(lr, policy)], ddof=1) / np.sqrt(len(groups[(lr, policy)])) for lr in lrs]
+        ax.errorbar(lrs, means, yerr=cis, marker="o", capsize=3, label=policy, color=colors[policy])
+    ax.set_xscale("log", base=2)
+    ax.set_xticks(lrs, [str(lr) for lr in lrs])
+    ax.set_xlabel("Learning rate")
+    ax.set_ylabel("Test accuracy (%)")
+    ax.set_title("High-learning-rate pilot (3 seeds)")
+    ax.legend()
+    ax.grid(alpha=0.25)
+    fig.tight_layout()
+    out = ROOT / "results" / "a1_high_lr_pilot" / "figures"
+    out.mkdir(exist_ok=True)
+    fig.savefig(out / "high_lr_accuracy.png", dpi=180)
+    plt.close(fig)
+
+
 def main() -> None:
     a3_plot(read_csv(ROOT / "results" / "a3_ablation_small" / "summary.csv"))
     a4_plot(read_csv(ROOT / "results" / "a4_multiseed_small" / "summary.csv"))
+    high_lr_plot(read_csv(ROOT / "results" / "a1_high_lr_pilot" / "raw_runs.csv"))
 
 
 if __name__ == "__main__":

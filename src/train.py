@@ -14,7 +14,15 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from src.clipping import DynamicsAwareClipping, adaptive_gradient_clip_, clipping_coefficient
+from src.clipping import (
+    AdaGC,
+    DynamicsAwareClipping,
+    ZClip,
+    adaptive_gradient_clip_,
+    clipping_coefficient,
+    finite_mask,
+    nanmean_or_nan,
+)
 from src.data import build_loaders
 from src.dynamics import gradient_alignment
 from src.models import build_model
@@ -65,6 +73,7 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
         train_size=cfg.get("train_size"),
         test_size=cfg.get("test_size"),
         subset_seed=cfg["seed"],
+        loader_seed=cfg["seed"],
     )
 
     if cfg["optimizer"] == "adamw":
@@ -84,6 +93,8 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     clip_name = clip_cfg.get("name", "none")
 
     dagc: DynamicsAwareClipping | None = None
+    zclip: ZClip | None = None
+    adagc: AdaGC | None = None
     fixed_threshold: float | None = clip_cfg.get("threshold") if clip_name == "fixed" else None
     if clip_name == "dagc":
         dagc = DynamicsAwareClipping(
@@ -94,8 +105,22 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             c_min_scale=clip_cfg.get("c_min_scale", 0.1),
             c_max_scale=clip_cfg.get("c_max_scale", 10.0),
             init_c=clip_cfg.get("init_c", 1.0),
+            exposure_target=clip_cfg.get("exposure_target"),
         )
         fixed_threshold = None
+    elif clip_name == "zclip":
+        zclip = ZClip(
+            alpha=clip_cfg.get("alpha", 0.97),
+            z_thres=clip_cfg.get("z_thres", 2.5),
+            warmup=clip_cfg.get("warmup", 25),
+        )
+    elif clip_name == "adagc":
+        adagc = AdaGC(
+            lambda_rel=clip_cfg.get("lambda_rel", 0.5),
+            beta=clip_cfg.get("beta_adagc", 0.999),
+            t_start=clip_cfg.get("t_start", 100),
+            lambda_abs=clip_cfg.get("lambda_abs", 1.0),
+        )
 
     # diagnostics
     log: dict[str, list] = {
@@ -112,8 +137,15 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
 
     g_prev: Tensor | None = None
     steps = 0
+    # Optional diagnostic hook: called once per step with the model, returns a
+    # flat dict of extra scalars to record in the run log.
+    hook: Callable | None = cfg.get("hook")
+    diverged = False
+    divergence_step: int | None = None
+    divergence_reason: str | None = None
 
     model.train()
+    max_steps = cfg.get("max_steps")
     for epoch in range(cfg["epochs"]):
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
@@ -130,10 +162,10 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             # clipping policy
             if clip_name == "none":
                 coeff = 1.0
-                c_used = float("inf")
+                target = float("inf")
             elif clip_name == "fixed":
                 coeff = float(clipping_coefficient(torch.tensor(gn), fixed_threshold))
-                c_used = fixed_threshold
+                target = fixed_threshold
                 _apply_coefficient(model, coeff)
             elif clip_name == "agc":
                 adaptive_gradient_clip_(
@@ -143,12 +175,26 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
                 )
                 clipped_norm = float(torch.norm(_flatten_grads(model)))
                 coeff = clipped_norm / (gn + 1e-12)
-                c_used = float("nan")
+                target = coeff * gn
             elif clip_name == "dagc":
                 assert dagc is not None
-                c_used = dagc.c
+                target = dagc.c
                 coeff = dagc.clip_coefficient(gn)
                 _apply_coefficient(model, coeff)
+            elif clip_name == "zclip":
+                assert zclip is not None
+                coeff = zclip.clip_coefficient(gn) if np.isfinite(gn) else 1.0
+                target = zclip.target if zclip.target is not None else float("inf")
+                if coeff != 1.0 and np.isfinite(coeff):
+                    for p in model.parameters():
+                        if p.grad is not None:
+                            p.grad.mul_(coeff)
+            elif clip_name == "adagc":
+                assert adagc is not None
+                adagc.step(model.parameters(), steps + 1)
+                clipped_norm = float(torch.norm(_flatten_grads(model)))
+                coeff = clipped_norm / (gn + 1e-12)
+                target = coeff * gn
             else:
                 raise ValueError(f"unknown clipping policy: {clip_name}")
 
@@ -160,15 +206,23 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             # DAGC applies c_t to the current update, then computes c_{t+1}.
             if dagc is not None:
                 dagc.update(gn, a)
+            if zclip is not None:
+                zclip.update(gn)
 
-            e = float(coeff < 1.0 - 1e-9)
-            intensity = max(0.0, 1.0 - coeff)
-            s_t = gn / (c_used + 1e-12) - 1.0 if np.isfinite(c_used) else float("nan")
-            if s_prev is not None and s_t * s_prev < 0:
+            # Exposure and intensity are derived uniformly from the effective
+            # target norm after clipping.  This is the only definition that
+            # works across all policies: per-unit methods (AGC, AdaGC) have no
+            # single scalar threshold, and ZClip may scale a step UP, which
+            # must not be counted as clipping.
+            e = float(np.isfinite(gn) and gn > target + 1e-12)
+            intensity = float(max(0.0, 1.0 - target / (gn + 1e-12))) if np.isfinite(gn) else 0.0
+            s_t = (gn / target - 1.0) if np.isfinite(target) and target > 0 else float("nan")
+            if s_prev is not None and np.isfinite(s_t) and np.isfinite(s_prev) and s_t * s_prev < 0:
                 switch_count += 1
             s_prev = s_t
 
-            log["loss"].append(float(loss.item()))
+            loss_value = float(loss.item())
+            log["loss"].append(loss_value)
             log["grad_norm"].append(gn)
             log["coeff"].append(coeff)
             log["update_norm"].append(upd_norm)
@@ -176,15 +230,57 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             log["exposure"].append(e)
             log["intensity"].append(intensity)
             log["signed"].append(s_t)
-            log["threshold"].append(c_used if np.isfinite(c_used) else np.nan)
+            log["threshold"].append(target if np.isfinite(target) else np.nan)
+
+            if hook is not None:
+                for key, value in hook(model).items():
+                    log.setdefault(key, []).append(value)
+
+            # Divergence: a non-finite loss/gradient, the loss leaving any
+            # plausible range for the cross-entropy on these tasks, or a
+            # single-step loss jump too large to be ordinary progress.  These
+            # are lower bounds on failure; a run that merely degrades without
+            # tripping one is not counted.
+            prev_loss = log["loss"][-2] if len(log["loss"]) > 1 else None
+            if not np.isfinite(loss_value) or not np.isfinite(gn):
+                diverged = True
+                divergence_step = steps + 1
+                if divergence_reason is None:
+                    divergence_reason = "nonfinite"
+            elif loss_value > cfg.get("divergence_loss", 100.0):
+                diverged = True
+                divergence_step = steps + 1
+                if divergence_reason is None:
+                    divergence_reason = "loss_explosion"
+            elif (
+                prev_loss is not None
+                and np.isfinite(prev_loss)
+                and loss_value > max(cfg.get("divergence_jump", 50.0), 20.0 * prev_loss + 1.0)
+            ):
+                diverged = True
+                divergence_step = steps + 1
+                if divergence_reason is None:
+                    divergence_reason = "loss_spike"
 
             gp = (gcat.reshape(1, -1) @ proj.t()).reshape(-1).cpu().numpy()
             grad_proj.append(gp)
 
             steps += 1
 
+            if diverged:
+                # Stop the run at the divergence point.  Continuing would only
+                # waste compute on a model that has already blown up, and the
+                # step at which it happened is the measurement we want.
+                break
+
+            if max_steps is not None and steps >= max_steps:
+                break
+
+        if diverged or (max_steps is not None and steps >= max_steps):
+            break
+
         if verbose:
-            mean_loss = float(np.mean(log["loss"][-len(train_loader):]))
+            mean_loss = nanmean_or_nan(log["loss"][-len(train_loader):])
             print(f"  epoch {epoch + 1}/{cfg['epochs']}  loss {mean_loss:.4f}  "
                   f"steps {steps}", flush=True)
 
@@ -207,20 +303,33 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     c1 = one_step_alignment(gp_arr)
     c2 = two_step_alignment(gp_arr)
 
+    loss_arr = np.asarray(log["loss"], dtype=float)
+    gn_arr = np.asarray(log["grad_norm"], dtype=float)
+    loss_finite = loss_arr[finite_mask(loss_arr)]
+    gn_finite = gn_arr[finite_mask(gn_arr)]
+    total_steps = cfg["epochs"] * len(train_loader)
+
     summary = {
         "policy": clip_name,
-        "test_acc": test_acc,
+        "test_acc": float(test_acc),
         "final_loss": log["loss"][-1],
-        "mean_loss": float(np.mean(log["loss"][-200:])),
-        "f_clip": float(np.mean(log["exposure"])),
-        "i_clip": float(np.mean(log["intensity"])),
+        # A diverged run writes NaN into the log; averaging without filtering
+        # would turn every downstream summary into NaN.
+        "mean_loss": nanmean_or_nan(loss_finite[-200:]),
+        "f_clip": nanmean_or_nan(log["exposure"]),
+        "i_clip": nanmean_or_nan(log["intensity"]),
         "n_switch": switch_count,
-        "mean_c1": float(np.mean(c1)),
-        "mean_c2": float(np.mean(c2)),
-        "loss_dom_freq": dominant_frequency(log["loss"]),
-        "gn_dom_freq": dominant_frequency(log["grad_norm"]),
-        "max_grad_norm": float(np.max(log["grad_norm"])),
-        "median_grad_norm": float(np.median(log["grad_norm"])),
+        "mean_c1": nanmean_or_nan(c1),
+        "mean_c2": nanmean_or_nan(c2),
+        "loss_dom_freq": dominant_frequency(loss_finite),
+        "gn_dom_freq": dominant_frequency(gn_finite),
+        "max_grad_norm": float(gn_finite.max()) if gn_finite.size else float("nan"),
+        "median_grad_norm": float(np.median(gn_finite)) if gn_finite.size else float("nan"),
+        "diverged": bool(diverged),
+        "divergence_step": divergence_step,
+        "divergence_reason": divergence_reason,
+        "steps_completed": steps,
+        "steps_planned": total_steps,
         "log": log,
     }
     return summary

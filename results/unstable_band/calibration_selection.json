@@ -1,0 +1,38 @@
+[
+  {
+    "family": "fixed",
+    "lr": 0.4,
+    "label": "fixed@0.25",
+    "div_rate": 0.0,
+    "acc": 0.8564999999999999,
+    "n": 3,
+    "candidates": "fixed@0.25: acc=0.8565 div=0.00 fixed@0.5: acc=0.8555 div=0.00 fixed@2: acc=0.8350 div=0.00 fixed@1: acc=0.8277 div=0.00 fixed@4: acc=0.8117 div=0.00"
+  },
+  {
+    "family": "dagc",
+    "lr": 0.4,
+    "label": "dagc@0.5,0.05",
+    "div_rate": 0.0,
+    "acc": 0.8401666666666666,
+    "n": 3,
+    "candidates": "dagc@0.5,0.05: acc=0.8402 div=0.00 dagc@1,0.05: acc=0.8373 div=0.00 dagc@1,0.15: acc=0.8368 div=0.00 dagc@2,0.15: acc=0.5695 div=0.33"
+  },
+  {
+    "family": "fixed",
+    "lr": 0.8,
+    "label": "fixed@0.25",
+    "div_rate": 0.0,
+    "acc": 0.8558333333333333,
+    "n": 3,
+    "candidates": "fixed@0.25: acc=0.8558 div=0.00 fixed@0.5: acc=0.8235 div=0.00 fixed@1: acc=0.7473 div=0.00 fixed@2: acc=0.5213 div=0.33 fixed@4: acc=0.1612 div=0.67"
+  },
+  {
+    "family": "dagc",
+    "lr": 0.8,
+    "label": "dagc@0.5,0.05",
+    "div_rate": 0.0,
+    "acc": 0.7761666666666667,
+    "n": 3,
+    "candidates": "dagc@0.5,0.05: acc=0.7762 div=0.00 dagc@1,0.05: acc=0.6623 div=0.33 dagc@1,0.15: acc=0.5150 div=0.33 dagc@2,0.15: acc=0.1150 div=1.00"
+  }
+]

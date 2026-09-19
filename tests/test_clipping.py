@@ -6,7 +6,7 @@ Run: python -m pytest tests/
 
 import torch
 
-from src.clipping import clipping_coefficient, clipping_indicator, clipping_intensity, global_norm_clip
+from src.clipping import DynamicsAwareClipping, clipping_coefficient, clipping_indicator, clipping_intensity, global_norm_clip
 
 
 def test_clip_reduces_norm() -> None:
@@ -26,3 +26,13 @@ def test_coefficient_values() -> None:
     assert clipping_coefficient(torch.tensor(2.0), 1.0).item() == 0.5
     assert clipping_indicator(torch.tensor(2.0), 1.0).item() == 1.0
     assert clipping_intensity(torch.tensor(2.0), 1.0).item() == 0.5
+
+
+def test_target_exposure_tightens_after_sustained_overexposure() -> None:
+    controller = DynamicsAwareClipping(
+        gamma=0.2, beta=0.5, relax=1.0, osc_weight=0.0,
+        init_c=5.0, exposure_target=0.2,
+    )
+    for _ in range(8):
+        controller.update(grad_norm=10.0, alignment=1.0)
+    assert controller.c < 5.0

@@ -3,7 +3,7 @@
 **Research project:** Dynamics-aware gradient clipping for stable and efficient
 neural-network training.
 
-Target venues: ICML / NeurIPS / ICLR.
+Target venue: ICML 2027.
 
 This repository contains the experimental code base for the machine-learning paper
 planned in the research outlines:
@@ -20,9 +20,10 @@ Gradient clipping is treated as a state-dependent controller. The project:
 3. builds a computationally cheap **dynamics-aware adaptive gradient clipping (DAGC)** method;
 4. validates it across architectures, datasets, optimizers, and learning rates.
 
-**Central falsifiable thesis:** using clipping exposure and gradient-direction
-dynamics to adapt the threshold improves the accuracy--stability trade-off over
-fixed clipping and standard adaptive-clipping baselines.
+**Central falsifiable thesis:** target-exposure feedback, together with
+gradient-direction dynamics, improves the accuracy--stability trade-off over
+calibrated fixed clipping and standard adaptive-clipping baselines in unstable
+training regimes.
 
 ## Repository Structure
 
@@ -82,7 +83,49 @@ Results are saved in `results/a3_ablation_small/` and
 `results/a4_multiseed_small/`. The runner checkpoints completed rows in
 `raw_runs.csv` and resumes safely after an interruption.
 
-## Current diagnostic result
+## DAGC-V2 held-out benchmark
+
+DAGC-V2 corrects the original controller's one-sided exposure rule. The
+original version merely slows threshold relaxation when clipping exposure is
+high. V2 regulates exposure around a target: excess exposure directly tightens
+the threshold. V2 parameters were selected once on separate development seeds
+and then frozen.
+
+The following held-out results use eight paired evaluation seeds per policy;
+the fixed threshold is calibrated on separate seeds in every condition.
+
+| Condition | Fixed | AGC | DAGC-V1 | DAGC-V2 | V2 vs. fixed |
+|---|---:|---:|---:|---:|---:|
+| FashionMNIST / CNN, SGD LR 0.4 | 86.76 ± 0.40 | 87.02 ± 0.70 | 83.18 ± 0.81 | **87.58 ± 0.63** | +0.82 pp (6/8) |
+| FashionMNIST / CNN, SGD LR 0.8 | 84.38 ± 1.19 | 84.95 ± 0.63 | 78.35 ± 4.67 | **86.56 ± 0.61** | +2.18 pp (7/8) |
+| FashionMNIST / MLP, SGD LR 0.8 | 82.59 ± 0.83 | 82.29 ± 1.12 | 77.51 ± 1.99 | **84.12 ± 0.52** | +1.53 pp (8/8) |
+| MNIST / CNN, SGD LR 0.8 | 97.23 ± 0.43 | 96.84 ± 0.36 | 85.19 ± 7.41 | **98.39 ± 0.15** | +1.16 pp (8/8) |
+
+Values are test accuracy (%) with 95% confidence intervals. No clipping
+diverges in 75--100% of these high-learning-rate runs. These are
+diagnostic-scale MNIST-family experiments, not a large-scale generalization
+claim.
+
+```bash
+# Reproduce the frozen V2 CNN evaluation at LR 0.8 (seeds 300--307)
+python scripts/run_dagc_v2_evaluation.py --lr 0.8 --seeds 300 301 302 303 304 305 306 307
+
+# Cross-learning-rate check, FashionMNIST CNN
+python scripts/run_dagc_v2_evaluation.py --lr 0.4 --seeds 308 309 310 311 312 313 314 315
+
+# Independent architecture and dataset evaluations
+python scripts/run_mlp_evaluation.py
+python scripts/run_mnist_evaluation.py
+
+# Produce the held-out results figure and CSV summary
+python analysis/plot_dagc_v2_evaluations.py
+```
+
+The raw CSVs are stored under `results/*_evaluation*/`; the figure and concise
+summary are in `results/figures/dagc_v2/`. Every runner checkpoints completed
+seed-policy pairs and resumes safely after interruption.
+
+## Earlier diagnostic result
 
 In the completed 5-seed, low-learning-rate diagnostic benchmark, DAGC's full
 controller outperformed its own ablations on FashionMNIST with a small CNN and
@@ -91,7 +134,8 @@ otherwise stable A4 conditions. This is expected for a clipping method: its
 central claim must be evaluated in high-learning-rate or otherwise unstable
 regimes where stabilizing updates is necessary.
 
-The next evaluation protocol is in `docs/next_experiments.md`.
+The updated evaluation protocol and remaining scale-up work are in
+`docs/next_experiments.md`.
 
 ## Experimental Program
 
