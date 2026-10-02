@@ -127,6 +127,21 @@ seed-policy pairs and resumes safely after interruption.
 
 ## Earlier diagnostic result
 
+## Mechanism experiments
+
+Run `python scripts/run_v2_mechanism.py` to reproduce 18 calibration runs and
+64 paired evaluations (FashionMNIST CNN, SGD LR 0.8). Calibration seeds
+800--802 select an approximately intensity-matched fixed threshold and generate
+a predetermined threshold schedule; evaluation seeds 900--907 remain separate.
+Complete logs, frozen protocol, raw outcomes, and summary are stored in
+`results/v2_mechanism/`. See `docs/mechanism_experiments.md` for definitions.
+
+V2 beats the matched fixed threshold by 1.18 percentage points (7/8 wins),
+but removing alignment changes accuracy by only 0.16 points and replaying the
+calibration schedule nearly matches online V2. Thus the evidence supports
+exposure-driven protective threshold profiles; it does not establish necessity
+of direction feedback or superiority of online feedback over replay.
+
 In the completed 5-seed, low-learning-rate diagnostic benchmark, DAGC's full
 controller outperformed its own ablations on FashionMNIST with a small CNN and
 SGD. It did **not** consistently outperform unclipped training across the

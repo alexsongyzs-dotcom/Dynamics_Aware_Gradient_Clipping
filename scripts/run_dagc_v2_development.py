@@ -28,7 +28,7 @@ def main() -> None:
         "agc@default": {"name": "agc", "clip_value": 0.01, "eps": 1e-3},
         "dagc_v1": {"name": "dagc", "init_c": 0.5, "gamma": 0.05, "beta": 0.9, "relax": 0.3, "osc_weight": 3.0},
     }
-    for target in (0.10, 0.20, 0.35):
+    for target in (0.10, 0.20, 0.35, 0.50, 0.70):
         for gamma in (0.05, 0.10):
             policies[f"dagc_v2@target={target:g},gamma={gamma:g}"] = {
                 "name": "dagc", "init_c": 0.5, "gamma": gamma, "beta": 0.9,

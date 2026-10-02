@@ -137,6 +137,9 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
 
     g_prev: Tensor | None = None
     steps = 0
+    norm_history = []
+    rate_exposure = 0.0
+    rate_threshold = clip_cfg.get("init_c", 0.5)
     # Optional diagnostic hook: called once per step with the model, returns a
     # flat dict of extra scalars to record in the run log.
     hook: Callable | None = cfg.get("hook")
@@ -166,6 +169,20 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
             elif clip_name == "fixed":
                 coeff = float(clipping_coefficient(torch.tensor(gn), fixed_threshold))
                 target = fixed_threshold
+                _apply_coefficient(model, coeff)
+            elif clip_name in ("autoclip", "rate_tracking", "replay"):
+                if clip_name == "autoclip":
+                    norm_history.append(gn)
+                    target = float(np.quantile(norm_history, clip_cfg.get("quantile", 0.1)))
+                elif clip_name == "replay":
+                    schedule = clip_cfg["schedule"]
+                    target = float(schedule[min(steps, len(schedule) - 1)])
+                else:
+                    target = rate_threshold
+                    event = float(gn > target)
+                    rate_exposure = 0.9 * rate_exposure + 0.1 * event
+                    rate_threshold *= np.exp(0.05 * np.tanh(0.3 * (rate_exposure - 0.1)))
+                coeff = min(1.0, target / (gn + 1e-12))
                 _apply_coefficient(model, coeff)
             elif clip_name == "agc":
                 adaptive_gradient_clip_(
