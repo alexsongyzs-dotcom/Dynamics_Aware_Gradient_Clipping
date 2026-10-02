@@ -29,3 +29,22 @@ when changing the protocol.
 The exposure signal triggers protection rather than tracking a target rate.
 Removing exposure costs 5.47 points; removing direction costs 0.16 +/- 0.41.
 Replay is only 0.21 +/- 0.53 points below V2. These controls narrow the claim.
+
+## Learning-rate perturbation test
+
+Run `python scripts/run_v2_lr_perturbation.py` after the mechanism calibration.
+The script reads the original replay schedule from
+`results/v2_mechanism/frozen_protocol.json`; it never recalibrates under perturbation.
+
+Independent seeds 1000--1007 are paired across V2, no alignment, and replay.
+The pulse changes LR from 0.8 to 1.6 before zero-based step 100 and restores
+0.8 before step 160. The drop changes LR to 0.2 before step 100 until completion.
+Other settings remain those of the mechanism experiment. Momentum is retained.
+There are 48 runs, each with a full trajectory JSON. Outputs and the exact
+schedules are in `results/v2_lr_perturbation/`.
+
+V2 minus replay: pulse -0.0625 +/- 0.5402 pp; drop +0.00625 +/- 0.4273 pp.
+V2 minus no alignment: pulse -0.01875 +/- 0.4295 pp; drop +0.2125 +/- 0.3527 pp.
+All intervals include zero. These perturbations do not identify an advantage
+from online directional feedback. This does not establish equivalence under
+other perturbations or schedules.

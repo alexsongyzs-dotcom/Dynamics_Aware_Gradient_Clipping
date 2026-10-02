@@ -151,6 +151,10 @@ def train_run(cfg: dict, verbose: bool = False) -> dict:
     max_steps = cfg.get("max_steps")
     for epoch in range(cfg["epochs"]):
         for x, y in train_loader:
+            for change in cfg.get("lr_changes", []):
+                if steps == change["step"]:
+                    for group in optimizer.param_groups:
+                        group["lr"] = change["lr"]
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
             out = model(x)

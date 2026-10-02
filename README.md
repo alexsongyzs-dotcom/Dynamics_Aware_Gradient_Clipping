@@ -139,7 +139,29 @@ See [the complete protocol](docs/mechanism_experiments.md). Raw CSVs, paired
 summaries, the frozen calibration protocol, and per-run trajectory JSONs are
 in [results/v2_mechanism](results/v2_mechanism/).
 
-## Diagnostic studies
+## Learning-rate perturbations
+
+Independent paired seeds 1000–1007 compare full V2, no alignment, and the
+original unperturbed calibration-trace replay. All runs retain the same
+300-step budget and momentum state.
+
+| Perturbation | V2 accuracy (%) | Replay accuracy (%) | Paired V2 minus replay (pp) |
+|---|---:|---:|---:|
+| Pulse: 0.8 → 1.6 at step 100 → 0.8 at step 160 | 86.47 ± 0.59 | 86.53 ± 0.81 | −0.06 ± 0.54 |
+| Drop: 0.8 → 0.2 at step 100 | 86.88 ± 0.43 | 86.87 ± 0.65 | +0.01 ± 0.43 |
+
+Step indices are zero-based; changes occur before the indicated batch.
+Neither perturbation demonstrates an additional accuracy benefit from online
+feedback or alignment. Replay remains competitive under these tested changes.
+
+```bash
+python scripts/run_v2_lr_perturbation.py
+```
+
+The 48 run trajectories, frozen protocol, raw CSV, and paired summary are
+in [results/v2_lr_perturbation](results/v2_lr_perturbation/).
+
+## Earlier diagnostics
 
 Earlier A3 and A4 experiments examine the original controller at stable learning
 rates. A3 compares component removals; A4 contains 160 runs spanning datasets,
