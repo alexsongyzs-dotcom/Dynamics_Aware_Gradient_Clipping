@@ -1,0 +1,21 @@
+{
+  "name": "lyx1-confirmatory-v1",
+  "split_seed": 1729,
+  "calibration_seeds": [2100, 2101, 2102],
+  "confirmation_seeds": [3100, 3101, 3102, 3103, 3104, 3105, 3106, 3107],
+  "batch_size": 256,
+  "conditions": [
+    {"name":"fashion_sgd_0p8", "dataset":"fashion_mnist", "lr":0.8, "epochs":30, "weight_decay":0.0001},
+    {"name":"cifar_sgd_0p1", "dataset":"cifar10", "lr":0.1, "epochs":60, "weight_decay":0.0005},
+    {"name":"cifar_sgd_0p4", "dataset":"cifar10", "lr":0.4, "epochs":60, "weight_decay":0.0005}
+  ],
+  "calibration_grid": {
+    "fixed": [0.05, 0.5, 5.0],
+    "agc": [0.005, 0.03, 0.18],
+    "autoclip": [1.0, 10.0, 50.0],
+    "median": [0.025, 0.1, 0.4]
+  },
+  "confirmation_policies": ["none", "fixed", "agc", "autoclip", "median", "dagc", "no_alignment", "replay"],
+  "primary_comparisons": ["fixed", "median", "replay"],
+  "equivalence_margin_percentage_points": 0.5
+}

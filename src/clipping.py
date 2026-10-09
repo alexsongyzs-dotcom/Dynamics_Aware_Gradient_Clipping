@@ -110,9 +110,10 @@ class DynamicsAwareClipping:
     controller does not need per-problem threshold tuning.
 
     ``exposure_target`` activates the second controller version.  Instead of
-    merely slowing threshold growth under high exposure, it regulates exposure
-    around a target: E_t above the target tightens clipping and E_t below it
-    relaxes clipping.  ``None`` retains the original controller for an honest
+    merely slowing threshold growth under high exposure, it tightens clipping
+    when E_t exceeds a reference level. This is positive exposure feedback,
+    not a stable target-tracking rule: tightening can increase exposure further.
+    ``None`` retains the original controller for an honest
     V1 baseline.
     """
 
