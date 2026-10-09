@@ -13,9 +13,14 @@
   causal, stability, and trajectory analysis utilities;
 - unit tests for core mathematical and experimental invariants.
 
-## Deliberately not executed on this machine
+## Validation on develop/lyx
 
-Training, dataset download, dependency installation, notebooks, and unit tests
-are deferred to the Linux environment. The current checkout therefore contains
-no new empirical result and makes no claim that the implementation has passed
-runtime validation. Follow `docs/reproducibility.md` after migration.
+On 2026-10-09 the local CPU suite passed all 31 tests. These include exact
+checkpoint recovery with augmentation/dropout, frozen-gain replay and common
+continuation, dataset split separation, interrupted-log reconciliation, and
+retaining a negative G2 report when all reference runs fail.
+
+The full server campaign is specified in `docs/server30_protocol.md` and
+`configs/campaigns/lyx_full.yaml`. CPU tests do not establish GPU reproducibility
+or scientific efficacy. GPU checks and each scientific gate have separate
+persisted reports; a stage is complete only when its actual report exists.

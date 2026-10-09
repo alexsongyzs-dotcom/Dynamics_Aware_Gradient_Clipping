@@ -206,6 +206,10 @@ def causal_report(records: list[dict], settings: dict, output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame(records)
     frame.to_csv(output / "causal_run_endpoints.csv", index=False)
+    if frame.empty:
+        report = dict(gate="G2", passed=False, reason="no_complete_pairs")
+        write_json(output / "gate_g2.json", report)
+        return report
     effects = []
     for family, table in frame.groupby("family"):
         reference = table[table["intervention"] == "reference_gain_replay_pre_moment"].set_index("seed")
