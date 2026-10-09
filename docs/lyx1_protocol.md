@@ -21,7 +21,7 @@ correction over the nine two-sided sign-flip comparisons. Report effect sizes
 and paired Student-t 95% intervals regardless of significance. A null result
 is not equivalence. Descriptive equivalence uses a prespecified +/-0.5 percentage
 point margin and requires the paired 90% interval to lie wholly inside it;
-this is not a familywise equivalence claim. Eight training seeds are the
+this is not a familywise equivalence claim. Twelve training seeds are the
 sampling units, not minibatches, epochs, or hyperparameter configurations.
 
 ## Data and training
@@ -87,8 +87,8 @@ comparison; their provenance and exact correspondence require a separate audit.
 
 ## Budget and outputs
 
-117 calibration runs (39 per condition), followed by 192 confirmation runs
-(8 policies x 8 seeds x 3 conditions), total 309. Full-data pilots are additional
+117 calibration runs (39 per condition), followed by 288 confirmation runs
+(8 policies x 12 seeds x 3 conditions), total 405. Full-data pilots are additional
 and reported separately. No adaptive stopping based on the primary result.
 The campaign can resume completed runs and epoch checkpoints without changing
 its protocol. A failed infrastructure process blocks completion; a scientific
@@ -97,7 +97,7 @@ failure is recorded as an outcome.
 Retain the protocol, source digest, calibration selection, every seed-level
 result, training curves, threshold/gradient traces, environment details, and
 final tables. Raw checkpoints stay on the server; compact evidence is exported
-into `results/lyx1/` for the paper. Completion means all 309 outcomes are
+into `results/lyx1/` for the paper. Completion means all 405 outcomes are
 accounted for and the paper tables can be regenerated from them.
 
 ## Audit of earlier evidence
@@ -110,3 +110,15 @@ independent replicates confounds settings with replication. Retain seed-level
 results, stratify by gain, and do not use that pooled interval as confirmatory
 uncertainty. Earlier evidence that replay nearly matches DAGC must remain
 visible, including if the new experiment yields an unfavorable result.
+
+## Sample-size amendment before confirmation
+
+Version 1 specified eight confirmation seeds. Before any confirmation run,
+version 2 increases this to twelve seeds (3100--3111). With eight pairs, the
+smallest two-sided exact sign-flip p-value is 2/256, above 0.05/9; hence the
+original nine-comparison Holm criterion could never reject. Twelve pairs
+allow a minimum p-value of 2/4096. The server audit records zero confirmation
+results and calibration-only running processes at amendment. No method,
+hyperparameter, condition, outcome definition or calibration seed changed.
+Identical completed calibration runs are carried forward after source/config
+identity verification; no unfavorable result is rerun or discarded.
