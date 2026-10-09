@@ -15,8 +15,31 @@ about neural-network training convergence.
 
 The [frozen protocol](docs/lyx1_protocol.md) specifies 405 runs: 117 validation
 calibrations and 288 confirmations, comparing eight policies over twelve paired
-seeds in each of three conditions. The campaign is currently running; numerical
-conclusions will be added after all outcomes pass the completeness audit.
+seeds in each of three conditions. **The study is complete:** 397 runs finished
+their full budget and eight met the predefined failure rule. All 405 outcomes
+passed the evidence audit; there were no process errors.
+
+The frozen DAGC-V2 rule **does not outperform validation-tuned fixed clipping**.
+Its paired deficits are significant after the prespecified nine-test Holm
+correction. The evidence supports a limited mechanism study, not a broad claim
+of a better optimizer.
+
+| Condition | DAGC accuracy (%) | Tuned fixed accuracy (%) | DAGC minus fixed (pp), paired 95% interval | Holm p |
+|---|---:|---:|---:|---:|
+| FashionMNIST, LR 0.8 | 92.41 | 92.60 | -0.18 [-0.29, -0.08] | 0.0176 |
+| CIFAR-10, LR 0.1 | 89.50 | 90.67 | -1.17 [-1.32, -1.02] | 0.0044 |
+| CIFAR-10, LR 0.4 | 90.87 | 91.16 | -0.29 [-0.41, -0.17] | 0.0103 |
+
+Calibration-trace replay meets the prespecified per-comparison equivalence
+criterion (paired 90% interval within +/-0.5 pp) in all three conditions; this
+is not a multiplicity-adjusted equivalence claim. DAGC occupies its moving
+lower bound on 97.2--99.1% of updates. On CIFAR-10, removing alignment leaves
+all twelve paired trajectories unchanged in each condition: negative alignment
+signals occur, but lower-bound projection masks their effect.
+
+Read the [English manuscript](paper/main.pdf), [Chinese result report](docs/lyx1_results.md),
+[complete numerical analysis](results/lyx1/analysis.json), and
+[evidence audit](results/lyx1/evidence/audit.json).
 
 | Condition | Training / validation / test | Model | Epochs | Initial LR |
 |---|---|---|---:|---:|
@@ -73,14 +96,26 @@ generators keep initialization, batches, and augmentation paired across
 policies. Nonfinite runs remain in accuracy aggregates at zero; finite
 chance-level outcomes remain at their observed accuracy.
 
-After the entire study completes:
+The committed evidence already regenerates the reported tables and PDF:
+
+```bash
+bash scripts/build_paper.sh
+```
+
+For a new full training campaign, export to a fresh directory; the exporter
+refuses to replace existing evidence:
 
 ```bash
 python -m scripts.export_confirmatory --root results/lyx1/raw/campaign \
-  --output results/lyx1/evidence
-python -m analysis.confirmatory_report
-bash scripts/build_paper.sh
+  --output results/lyx1/raw/reproduced-evidence
+python -m analysis.confirmatory_report --evidence results/lyx1/raw/reproduced-evidence
+python -m analysis.audit_confirmatory_mechanism --root results/lyx1/raw/campaign \
+  --output results/lyx1/raw/reproduced-mechanism-audit.json
 ```
+
+The mechanism audit requires full-resolution raw traces. See the
+[evidence inventory](results/lyx1/README.md) for what is included in the compact
+archive and what remains with the raw experiment.
 
 The export checks run identities, condition settings, evaluation splits, seed
 coverage, epoch continuity, and failure accounting. The analysis produces

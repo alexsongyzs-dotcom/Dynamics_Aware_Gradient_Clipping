@@ -1,0 +1,15 @@
+\begin{tabular}{llrrrr}
+\toprule
+Condition / initial LR & Comparator & Difference & 95\% interval & Wins & $p_H$ \\
+\midrule
+FashionMNIST / 0.8 & Tuned fixed & -0.184 & [-0.291, -0.078] & 1/12 & 0.0176 \\
+FashionMNIST / 0.8 & Tuned median scale & -0.148 & [-0.251, -0.044] & 2/12 & 0.0635 \\
+FashionMNIST / 0.8 & Trace replay & +0.023 & [-0.081, +0.126] & 5/12 & 0.7236 \\
+CIFAR-10 / 0.1 & Tuned fixed & -1.172 & [-1.325, -1.019] & 0/12 & 0.0044 \\
+CIFAR-10 / 0.1 & Tuned median scale & -1.080 & [-1.257, -0.903] & 0/12 & 0.0044 \\
+CIFAR-10 / 0.1 & Trace replay & +0.102 & [-0.076, +0.280] & 8/12 & 0.7236 \\
+CIFAR-10 / 0.4 & Tuned fixed & -0.292 & [-0.409, -0.175] & 1/12 & 0.0103 \\
+CIFAR-10 / 0.4 & Tuned median scale & -0.205 & [-0.405, -0.005] & 3/12 & 0.1914 \\
+CIFAR-10 / 0.4 & Trace replay & -0.068 & [-0.200, +0.065] & 4/12 & 0.7236 \\
+\bottomrule
+\end{tabular}

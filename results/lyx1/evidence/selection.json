@@ -1,0 +1,395 @@
+{
+  "fashion_sgd_0p8": {
+    "fixed": {
+      "selected_value": 0.05,
+      "candidates": [
+        {
+          "value": 0.05,
+          "mean_validation_accuracy": 0.9304,
+          "seed_scores": [
+            0.9288,
+            0.9306,
+            0.9318
+          ]
+        },
+        {
+          "value": 0.5,
+          "mean_validation_accuracy": 0.9032,
+          "seed_scores": [
+            0.9028,
+            0.9044,
+            0.9024
+          ]
+        },
+        {
+          "value": 5.0,
+          "mean_validation_accuracy": 0.10000000000000002,
+          "seed_scores": [
+            0.1,
+            0.1,
+            0.1
+          ]
+        }
+      ]
+    },
+    "agc": {
+      "selected_value": 0.005,
+      "candidates": [
+        {
+          "value": 0.005,
+          "mean_validation_accuracy": 0.9309999999999999,
+          "seed_scores": [
+            0.9304,
+            0.9338,
+            0.9288
+          ]
+        },
+        {
+          "value": 0.03,
+          "mean_validation_accuracy": 0.6357333333333334,
+          "seed_scores": [
+            0.1,
+            0.9052,
+            0.902
+          ]
+        },
+        {
+          "value": 0.18,
+          "mean_validation_accuracy": 0.10000000000000002,
+          "seed_scores": [
+            0.1,
+            0.1,
+            0.1
+          ]
+        }
+      ]
+    },
+    "autoclip": {
+      "selected_value": 1.0,
+      "candidates": [
+        {
+          "value": 1.0,
+          "mean_validation_accuracy": 0.9089333333333333,
+          "seed_scores": [
+            0.9106,
+            0.9072,
+            0.909
+          ]
+        },
+        {
+          "value": 10.0,
+          "mean_validation_accuracy": 0.9032666666666667,
+          "seed_scores": [
+            0.9002,
+            0.9114,
+            0.8982
+          ]
+        },
+        {
+          "value": 50.0,
+          "mean_validation_accuracy": 0.3662666666666667,
+          "seed_scores": [
+            0.8988,
+            0.1,
+            0.1
+          ]
+        }
+      ]
+    },
+    "median": {
+      "selected_value": 0.1,
+      "candidates": [
+        {
+          "value": 0.025,
+          "mean_validation_accuracy": 0.9194,
+          "seed_scores": [
+            0.9186,
+            0.9196,
+            0.92
+          ]
+        },
+        {
+          "value": 0.1,
+          "mean_validation_accuracy": 0.9306000000000001,
+          "seed_scores": [
+            0.93,
+            0.932,
+            0.9298
+          ]
+        },
+        {
+          "value": 0.4,
+          "mean_validation_accuracy": 0.9116666666666666,
+          "seed_scores": [
+            0.9118,
+            0.9112,
+            0.912
+          ]
+        }
+      ]
+    },
+    "replay_sha256": "f4e21b37ed7a7977558a695ee2f223952429dcf422a01d14710b46b7c6bd9b1a"
+  },
+  "cifar_sgd_0p1": {
+    "fixed": {
+      "selected_value": 5.0,
+      "candidates": [
+        {
+          "value": 0.05,
+          "mean_validation_accuracy": 0.7725333333333334,
+          "seed_scores": [
+            0.776,
+            0.7858,
+            0.7558
+          ]
+        },
+        {
+          "value": 0.5,
+          "mean_validation_accuracy": 0.9116,
+          "seed_scores": [
+            0.9108,
+            0.9048,
+            0.9192
+          ]
+        },
+        {
+          "value": 5.0,
+          "mean_validation_accuracy": 0.9164,
+          "seed_scores": [
+            0.9172,
+            0.9186,
+            0.9134
+          ]
+        }
+      ]
+    },
+    "agc": {
+      "selected_value": 0.18,
+      "candidates": [
+        {
+          "value": 0.005,
+          "mean_validation_accuracy": 0.8424666666666667,
+          "seed_scores": [
+            0.8464,
+            0.8386,
+            0.8424
+          ]
+        },
+        {
+          "value": 0.03,
+          "mean_validation_accuracy": 0.9030666666666667,
+          "seed_scores": [
+            0.9068,
+            0.9038,
+            0.8986
+          ]
+        },
+        {
+          "value": 0.18,
+          "mean_validation_accuracy": 0.9151333333333334,
+          "seed_scores": [
+            0.9162,
+            0.9152,
+            0.914
+          ]
+        }
+      ]
+    },
+    "autoclip": {
+      "selected_value": 10.0,
+      "candidates": [
+        {
+          "value": 1.0,
+          "mean_validation_accuracy": 0.9134000000000001,
+          "seed_scores": [
+            0.915,
+            0.913,
+            0.9122
+          ]
+        },
+        {
+          "value": 10.0,
+          "mean_validation_accuracy": 0.9150666666666667,
+          "seed_scores": [
+            0.918,
+            0.9118,
+            0.9154
+          ]
+        },
+        {
+          "value": 50.0,
+          "mean_validation_accuracy": 0.9148,
+          "seed_scores": [
+            0.9106,
+            0.9168,
+            0.917
+          ]
+        }
+      ]
+    },
+    "median": {
+      "selected_value": 0.4,
+      "candidates": [
+        {
+          "value": 0.025,
+          "mean_validation_accuracy": 0.8772666666666668,
+          "seed_scores": [
+            0.8766,
+            0.88,
+            0.8752
+          ]
+        },
+        {
+          "value": 0.1,
+          "mean_validation_accuracy": 0.9060666666666667,
+          "seed_scores": [
+            0.9076,
+            0.9064,
+            0.9042
+          ]
+        },
+        {
+          "value": 0.4,
+          "mean_validation_accuracy": 0.9117333333333333,
+          "seed_scores": [
+            0.9072,
+            0.9134,
+            0.9146
+          ]
+        }
+      ]
+    },
+    "replay_sha256": "4cd43b6ae27ccacc51e1eb268c1f6045a1f7c6fb28a0f86734a4146bb85f45a9"
+  },
+  "cifar_sgd_0p4": {
+    "fixed": {
+      "selected_value": 0.5,
+      "candidates": [
+        {
+          "value": 0.05,
+          "mean_validation_accuracy": 0.8876,
+          "seed_scores": [
+            0.8914,
+            0.8874,
+            0.884
+          ]
+        },
+        {
+          "value": 0.5,
+          "mean_validation_accuracy": 0.9201333333333334,
+          "seed_scores": [
+            0.922,
+            0.9158,
+            0.9226
+          ]
+        },
+        {
+          "value": 5.0,
+          "mean_validation_accuracy": 0.9126,
+          "seed_scores": [
+            0.9126,
+            0.9082,
+            0.917
+          ]
+        }
+      ]
+    },
+    "agc": {
+      "selected_value": 0.03,
+      "candidates": [
+        {
+          "value": 0.005,
+          "mean_validation_accuracy": 0.8365999999999999,
+          "seed_scores": [
+            0.8384,
+            0.8358,
+            0.8356
+          ]
+        },
+        {
+          "value": 0.03,
+          "mean_validation_accuracy": 0.9156666666666666,
+          "seed_scores": [
+            0.9148,
+            0.9162,
+            0.916
+          ]
+        },
+        {
+          "value": 0.18,
+          "mean_validation_accuracy": 0.9144666666666666,
+          "seed_scores": [
+            0.9154,
+            0.9124,
+            0.9156
+          ]
+        }
+      ]
+    },
+    "autoclip": {
+      "selected_value": 10.0,
+      "candidates": [
+        {
+          "value": 1.0,
+          "mean_validation_accuracy": 0.9144,
+          "seed_scores": [
+            0.9204,
+            0.9082,
+            0.9146
+          ]
+        },
+        {
+          "value": 10.0,
+          "mean_validation_accuracy": 0.9163333333333333,
+          "seed_scores": [
+            0.9174,
+            0.9152,
+            0.9164
+          ]
+        },
+        {
+          "value": 50.0,
+          "mean_validation_accuracy": 0.9144,
+          "seed_scores": [
+            0.916,
+            0.9156,
+            0.9116
+          ]
+        }
+      ]
+    },
+    "median": {
+      "selected_value": 0.4,
+      "candidates": [
+        {
+          "value": 0.025,
+          "mean_validation_accuracy": 0.8985333333333333,
+          "seed_scores": [
+            0.8958,
+            0.8922,
+            0.9076
+          ]
+        },
+        {
+          "value": 0.1,
+          "mean_validation_accuracy": 0.9191333333333334,
+          "seed_scores": [
+            0.9218,
+            0.915,
+            0.9206
+          ]
+        },
+        {
+          "value": 0.4,
+          "mean_validation_accuracy": 0.9202666666666667,
+          "seed_scores": [
+            0.92,
+            0.9214,
+            0.9194
+          ]
+        }
+      ]
+    },
+    "replay_sha256": "b33c82f8d438ea7992a5343c17da87a3cb724b02c2376bfd18b71d46bcf06161"
+  }
+}

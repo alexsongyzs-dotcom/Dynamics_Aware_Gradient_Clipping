@@ -1,6 +1,7 @@
 """Regenerate all confirmatory paper tables and figures from the exported evidence."""
 import argparse
 import json
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -14,9 +15,16 @@ LABELS={'none':'No clipping','fixed':'Tuned fixed','agc':'Tuned AGC','autoclip':
 CONDITIONS={'fashion_sgd_0p8':'FashionMNIST / 0.8','cifar_sgd_0p1':'CIFAR-10 / 0.1','cifar_sgd_0p4':'CIFAR-10 / 0.4'}
 
 
+def display_number(value, places=2, signed=False):
+    """Round display values consistently, without binary-float tie artifacts."""
+    quantum = Decimal(1).scaleb(-places)
+    rounded = Decimal(str(round(float(value), 10))).quantize(quantum, rounding=ROUND_HALF_UP)
+    return format(rounded, ('+' if signed else '') + f'.{places}f')
+
+
 def cell(values):
     m,lo,hi=mean_ci(values)
-    return f'${m:.2f}\\pm{(hi-lo)/2:.2f}$'
+    return f'${display_number(m)}\\pm{display_number((hi-lo)/2)}$'
 
 
 
@@ -115,12 +123,12 @@ def main():
         items=[LABELS[policy]]
         for c in protocol['conditions']:
             r=next(r for r in summary if r['condition']==c['name'] and r['policy']==policy)
-            items.append(f"${r['mean']:.2f}\\pm{(r['upper']-r['lower'])/2:.2f}$")
+            items.append(f"${display_number(r['mean'])}\\pm{display_number((r['upper']-r['lower'])/2)}$")
         rows.append(' & '.join(items)+r' \\')
     write_table(tables/'accuracy.tex', 'lccc', r'Policy & FashionMNIST, LR 0.8 & CIFAR-10, LR 0.1 & CIFAR-10, LR 0.4', rows)
     rows=[]
     for d in primary:
-        rows.append(f"{CONDITIONS[d['condition']]} & {LABELS[d['comparator']]} & {d['mean']:+.2f} & [{d['lower']:+.2f}, {d['upper']:+.2f}] & {d['wins']}/{d['n']} & {d['holm_p']:.4f} \\\\")
+        rows.append(f"{CONDITIONS[d['condition']]} & {LABELS[d['comparator']]} & {display_number(d['mean'], 3, True)} & [{display_number(d['lower'], 3, True)}, {display_number(d['upper'], 3, True)}] & {d['wins']}/{d['n']} & {d['holm_p']:.4f} \\\\")
     write_table(tables/'paired.tex', 'llrrrr', r'Condition / initial LR & Comparator & Difference & 95\% interval & Wins & $p_H$', rows)
     rows=[]
     for r in summary:
@@ -155,13 +163,16 @@ def main():
             grouped=frame.groupby('bin')
             average=grouped[['threshold','coefficient','lower_bound_hit']].mean()
             x=(average.index+.5)/100
-            axes[0,col].plot(x,average.threshold,label=LABELS[policy],color=color)
-            axes[1,col].plot(x,1-average.coefficient,label=LABELS[policy],color=color)
+            axes[0,col].plot(x,average.threshold,label=LABELS[policy],color=color,
+                linestyle='--' if policy=='no_alignment' else '-',linewidth=1.4)
+            axes[1,col].plot(x,1-average.coefficient,label=LABELS[policy],color=color,
+                linestyle='--' if policy=='no_alignment' else '-',linewidth=1.4)
         axes[0,col].set_title(CONDITIONS[c['name']]);axes[0,col].set_yscale('log')
         axes[1,col].set_xlabel('Fraction of training');axes[1,col].set_ylim(0,1)
     axes[0,0].set_ylabel('Applied threshold');axes[1,0].set_ylabel('Clipping intensity')
-    axes[0,2].legend(fontsize=7,loc='best')
-    fig.tight_layout();fig.savefig(paper/'figures/lyx1_traces.pdf');plt.close(fig)
+    handles, labels = axes[0,2].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='lower center', ncol=4, frameon=False, fontsize=8)
+    fig.tight_layout(rect=(0, .075, 1, 1));fig.savefig(paper/'figures/lyx1_traces.pdf');plt.close(fig)
     print(json.dumps({'runs':len(records),'primary_comparisons':primary},indent=2))
 
 

@@ -1,20 +1,24 @@
 # Manuscript and reproducible build
 
-The `develop/lyx1` manuscript is being revised around validation-isolated
-confirmation and explicit mechanism controls. The final PDF will be rebuilt
-when all 405 frozen-protocol outcomes pass the evidence audit. Until then,
-`main.tex` contains visible pending-result text and the committed `main.pdf`
-remains the previous main-branch manuscript; it should not be cited as the new
-study's result.
+The `develop/lyx1` manuscript and [PDF](main.pdf) report the completed,
+audited 405-run study: 117 validation calibrations and 288 confirmations.
+Eight no-clipping FashionMNIST runs met the predefined failure rule and remain
+in all aggregates. There are no process errors or pending experiment results.
+
+The frozen DAGC rule loses to tuned fixed clipping in all three conditions.
+Replay meets the stated per-comparison equivalence criterion, and full CIFAR
+traces show that lower-bound projection masks the alignment term. The paper
+reports these negative results explicitly rather than retaining the earlier
+broad method-superiority claim.
 
 The revised title is **Dynamics-Aware Gradient Clipping: Separating Feedback
 from Threshold Scheduling**. The paper includes a local mean-field analysis,
 new full-data comparisons, and corrected reporting of legacy experiments.
 Legacy tests are explicitly exploratory because official test scores were
-available during development. The direction and significance of the new
-results are not assumed in advance.
+available during development. All current numerical tables and figures are generated from the exported
+seed-level evidence. Narrative result fragments are checked against that evidence.
 
-After final evidence is exported to `results/lyx1/evidence/`, run from the
+The final evidence is included at `results/lyx1/evidence/`. Rebuild from the
 repository root:
 
 ```sh

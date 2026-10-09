@@ -1,0 +1,69 @@
+\subsection{Completeness, failures, and accuracy}
+All 405 planned outcomes pass the source/configuration, split, seed-coverage,
+epoch-continuity, calibration-selection, and replay-construction audits.
+There are 397 full-budget completions and eight predefined scientific
+failures, with no process errors. All eight failures occur without clipping
+on FashionMNIST. Its four remaining unclipped runs finish at 10\% accuracy;
+retaining failures at zero gives a mean of 3.33\%. Every clipped
+confirmation run and every CIFAR-10 run completes its budget.
+
+Table~\ref{tab:accuracy} reports the full comparison. On FashionMNIST, DAGC
+reaches 92.41\%, versus 92.60\% for tuned fixed clipping and 92.56\% for the
+tuned median rule. On CIFAR-10 at LR 0.1, DAGC reaches 89.50\%, versus
+90.67\% for fixed clipping. At LR 0.4, the corresponding scores are 90.87\%
+and 91.16\%. AGC attains the highest observed mean at the higher CIFAR
+rate, 91.20\%; differences among non-DAGC baselines are not a prespecified
+hypothesis family.
+
+The paired DAGC-minus-fixed effects are $-0.18$, $-1.17$, and $-0.29$ points,
+with Holm-adjusted $p$-values 0.0176, 0.0044, and 0.0103, respectively
+(Table~\ref{tab:paired}). Thus the new study reverses the earlier exploratory
+fixed-baseline advantage. These are different data sizes, schedules, and
+calibration budgets, so this is a failure of transfer under the new protocol,
+not a claim that the earlier measurements were numerically false. The
+prespecified broad-superiority criterion is not met.
+
+At CIFAR-10 LR 0.1, calibration selects fixed threshold 5.0, and this threshold
+never binds in confirmation. Its norm traces and coefficients exactly match
+no clipping. Accordingly, the 1.17-point deficit is also a deficit to the
+unmodified optimizer. At LR 0.4, DAGC exceeds no clipping by 0.52 points
+[0.25, 0.79], but stronger performance is achieved by the tuned fixed rule.
+Avoiding divergence or improving on no clipping is therefore insufficient
+evidence for the particular DAGC controller.
+
+\subsection{Replay and alignment controls}
+DAGC-minus-replay differences are $+0.02$, $+0.10$, and $-0.07$ points.
+Their paired 90\% intervals are [$-0.06$, 0.11], [$-0.04$, 0.25], and
+[$-0.18$, 0.04]. Each lies inside the prespecified $\pm0.5$ point margin.
+This supports equivalence within each tested condition at that tolerance;
+it is not a multiplicity-adjusted familywise equivalence result, nor a claim
+that the methods coincide outside these settings. The corresponding 95\%
+intervals appear in Table~\ref{tab:paired} and Figure~\ref{fig:paired}.
+
+Removing alignment changes FashionMNIST accuracy by $+0.15$ points in DAGC's
+favor, with a paired 95\% interval [$-0.04$, 0.33]. On both CIFAR-10
+conditions, all twelve paired raw-gradient norms, applied thresholds,
+coefficients, alignment traces, and lower-bound indicators are exactly equal
+between DAGC and the no-alignment variant. The complete-trace audit shows that negative smoothed alignments do occur;
+the direction term is therefore not intrinsically inactive. All 3,860
+negative-alignment-EMA updates across the two CIFAR conditions are projected
+to the lower bound. Its effect on
+the applied threshold is masked by lower-bound projection in these runs.
+This identifies a limit of the implemented controller, rather than
+demonstrating that gradient direction never matters.
+
+\subsection{The lower bound dominates the controller}
+DAGC's next-step threshold equals its moving lower bound on 97.18\%, 99.07\%,
+and 99.00\% of updates, respectively. Its mean clipping intensities are
+0.893, 0.900, and 0.899. Figure~\ref{fig:traces} shows the resulting profiles.
+These measurements are consistent with the positive-feedback calculation:
+clipping stays active and the projection frequently determines the threshold.
+
+The validation-selected median coefficient is 0.1 on FashionMNIST, matching
+DAGC's lower-bound scale, and 0.4 on both CIFAR conditions. The CIFAR median
+rule therefore retains larger gradients, with intensities near 0.60. DAGC
+falls below it by 1.08 points at LR 0.1 (Holm $p=0.0044$) and 0.21 points
+at LR 0.4 (Holm $p=0.1914$). The latter comparison does not pass the primary
+multiplicity criterion. Bound occupancy describes which part of the rule
+is active; by itself it does not prove that changing only the bound would
+produce a particular accuracy gain.

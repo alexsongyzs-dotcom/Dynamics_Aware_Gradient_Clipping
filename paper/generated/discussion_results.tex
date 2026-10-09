@@ -1,0 +1,16 @@
+The evidence supports a narrow negative conclusion about the frozen V2 rule:
+it does not outperform a validation-tuned fixed threshold in any of the three
+conditions, and its threshold adaptation adds no practically resolved
+advantage over calibration replay under the stated margin. The lower bound
+accounts for nearly all threshold updates, while its directional adjustments are masked by
+projection on CIFAR-10. Calling these runs successful target tracking or evidence
+that online directional feedback is necessary would contradict the controls.
+They instead show how an apparently dynamic controller can behave mostly as a
+historical-scale clipping rule.
+
+The FashionMNIST and higher-rate CIFAR fixed-baseline gaps are statistically
+resolved but smaller than 0.5 points. Statistical inferiority can coexist with
+practical equivalence at a specified tolerance; the larger low-rate CIFAR gap
+falls outside that tolerance. The finding should guide subsequent research
+toward identifying conditions where feedback is informative, rather than
+retuning the present confirmation runs after observing their test scores.

@@ -1,0 +1,14 @@
+\begin{tabular}{lccc}
+\toprule
+Policy & FashionMNIST, LR 0.8 & CIFAR-10, LR 0.1 & CIFAR-10, LR 0.4 \\
+\midrule
+No clipping & $3.33\pm3.13$ & $90.67\pm0.09$ & $90.35\pm0.28$ \\
+Tuned fixed & $92.60\pm0.07$ & $90.67\pm0.09$ & $91.16\pm0.12$ \\
+Tuned AGC & $92.40\pm0.05$ & $90.66\pm0.14$ & $91.20\pm0.16$ \\
+Tuned AutoClip & $90.46\pm0.15$ & $90.63\pm0.12$ & $90.78\pm0.27$ \\
+Tuned median scale & $92.56\pm0.12$ & $90.58\pm0.16$ & $91.08\pm0.15$ \\
+DAGC-V2 & $92.41\pm0.09$ & $89.50\pm0.10$ & $90.87\pm0.11$ \\
+No alignment & $92.26\pm0.18$ & $89.50\pm0.10$ & $90.87\pm0.11$ \\
+Trace replay & $92.39\pm0.09$ & $89.40\pm0.15$ & $90.94\pm0.09$ \\
+\bottomrule
+\end{tabular}
