@@ -15,10 +15,17 @@
 
 ## Validation on develop/lyx
 
-On 2026-10-09 the local CPU suite passed all 31 tests. These include exact
+On 2026-10-09 the local CPU suite passed all 35 tests. These include exact
 checkpoint recovery with augmentation/dropout, frozen-gain replay and common
 continuation, dataset split separation, interrupted-log reconciliation, and
-retaining a negative G2 report when all reference runs fail.
+retaining a negative G2 report when all reference runs fail, and deterministic
+adaptive pooling with output/gradient agreement against PyTorch.
+
+The first server G0 attempt passed the previous 31-test CUDA suite but exposed
+an unsupported deterministic CUDA backward in the real SmallCNN's adaptive
+pooling. Its logs are retained. The explicit pooling-window implementation
+fixes that operation without disabling deterministic algorithms; the revised
+source requires a fresh G0 run before any scientific screening.
 
 The full server campaign is specified in `docs/server30_protocol.md` and
 `configs/campaigns/lyx_full.yaml`. CPU tests do not establish GPU reproducibility

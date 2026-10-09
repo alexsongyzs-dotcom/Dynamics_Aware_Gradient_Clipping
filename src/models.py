@@ -7,6 +7,32 @@ import torch.nn as nn
 from torchvision import models as tv_models
 
 
+class DeterministicAdaptiveAvgPool2d(nn.Module):
+    """Adaptive average pooling without CUDA's atomic backward implementation.
+
+    Pooling windows match PyTorch's floor/ceil boundaries, including overlaps
+    when the input dimensions are not divisible by the output dimensions.
+    Explicit slice reductions preserve those semantics under strict replay.
+    """
+
+    def __init__(self, output_size: tuple[int, int]) -> None:
+        super().__init__()
+        self.output_size = output_size
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        height, width = inputs.shape[-2:]
+        out_height, out_width = self.output_size
+        cells = []
+        for row in range(out_height):
+            start_y = row * height // out_height
+            end_y = ((row + 1) * height + out_height - 1) // out_height
+            for column in range(out_width):
+                start_x = column * width // out_width
+                end_x = ((column + 1) * width + out_width - 1) // out_width
+                cells.append(inputs[..., start_y:end_y, start_x:end_x].mean(dim=(-2, -1)))
+        return torch.stack(cells, dim=-1).reshape(*inputs.shape[:-2], out_height, out_width)
+
+
 class SmallCNN(nn.Module):
     def __init__(self, input_channels: int = 1, num_classes: int = 10) -> None:
         super().__init__()
@@ -16,7 +42,7 @@ class SmallCNN(nn.Module):
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, 3, padding=1),
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d((4, 4)),
+            DeterministicAdaptiveAvgPool2d((4, 4)),
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),

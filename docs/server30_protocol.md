@@ -25,6 +25,10 @@ G0 测量/恢复不通过时修复工程；G1 预测增量不通过时保留负�
   测试集。不得用 test accuracy 选参数。固定诊断 probe 来自训练集。
 - 使用独立运行环境；代码、协议、结果与锁定依赖保存于
   `/mnt/data/users/yuxin/workspace/DAGC-develop-lyx/`。
+- 解压后的相同数据可缓存到 `/tmp/dagc-yuxin-runtime/data` 以避免共享盘 I/O；
+  原始数据包、校验清单和结果保持持久保存。实际缓存路径写入冻结配置。
+- 小型 CNN 的自适应均值池化使用相同 floor/ceil 窗口的显式切片归约，以支持
+  CUDA 严格确定性的反向传播；不关闭确定性来绕过 G0。
 - PyTorch 2.8.0 / torchvision 0.23.0 CUDA 12.8 的版本组合来自
   [官方版本安装表](https://pytorch.org/get-started/previous-versions/)。运行时仍须实际
   通过 CUDA 运算和 GPU 恢复测试；版本声明本身不替代验证。
