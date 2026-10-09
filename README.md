@@ -1,216 +1,160 @@
 # Dynamics-Aware Gradient Clipping
 
-Research implementation of **Dynamics-Aware Gradient Clipping: Protective Feedback for Unstable Training**.
+Research code for **Dynamics-Aware Gradient Clipping: Separating Feedback from
+Threshold Scheduling**. The `develop/lyx1` study starts from `main` and tests
+whether exposure and gradient-alignment feedback adds value beyond tuned
+clipping and predetermined threshold schedules.
 
-DAGC adapts a global gradient-clipping threshold using recent clipping exposure
-and consecutive-gradient alignment. DAGC-V2 strengthens clipping when exposure
-exceeds a reference level. Experiments investigate its accuracy and protection
-mechanism in unstable training with small CNN and MLP models.
+DAGC-V2 lowers its clipping threshold when clipping is already frequent. This
+is positive exposure feedback. A stationary mean-field calculation, including
+the exposure EMA, shows that an interior target-exposure equilibrium is
+unstable. This statement concerns the controller model; it is not a theorem
+about neural-network training convergence.
 
-## Method
+## Current study
 
-The clipped gradient and controller update are
+The [frozen protocol](docs/lyx1_protocol.md) specifies 405 runs: 117 validation
+calibrations and 288 confirmations, comparing eight policies over twelve paired
+seeds in each of three conditions. The campaign is currently running; numerical
+conclusions will be added after all outcomes pass the completeness audit.
 
-```text
-clipped_gradient = min(1, c / (gradient_norm + epsilon)) * gradient
-E = beta * E + (1 - beta) * indicator(gradient_norm > c)
-A = beta_a * A + (1 - beta_a) * alignment
-signal = relax * (reference - E) - osc_weight * max(0, -A)
-c_next = project(c * exp(gamma * tanh(signal)), lower_bound, upper_bound)
-```
+| Condition | Training / validation / test | Model | Epochs | Initial LR |
+|---|---|---|---:|---:|
+| FashionMNIST | 55,000 / 5,000 / 10,000 | SmallCNN | 30 | 0.8 |
+| CIFAR-10 | 45,000 / 5,000 / 10,000 | ResNet-20 | 60 | 0.1 |
+| CIFAR-10 | 45,000 / 5,000 / 10,000 | ResNet-20 | 60 | 0.4 |
 
-The current threshold is applied before computing the next threshold. Bounds
-track a rolling median of gradient norms. Full-gradient alignment is used by
-the controller; random projections provide auxiliary diagnostics.
+Policies are no clipping, tuned fixed clipping, tuned unit-wise AGC, tuned
+AutoClip, tuned lagged-median scaling, frozen DAGC-V2, DAGC without alignment,
+and calibration-trace replay. Four baselines each receive three candidates by
+three calibration seeds. Test data is excluded from this campaign's selection;
+FashionMNIST test data had been used in earlier method development, which
+remains a limitation.
 
-V2 uses the reference level as a sign-change threshold for protective feedback.
-It does not track a target clipping rate. The original V1 controller remains
-available by setting `exposure_target=None`.
+The first execution plan used eight confirmation seeds. Before any confirmation
+run, the plan was amended to twelve because an eight-pair exact sign-flip test
+cannot pass the first Holm threshold for nine primary comparisons. This
+amendment and the unchanged calibration runs carried forward are audited.
 
-The frozen V2 configuration is `init_c=0.5`, `gamma=0.05`, `beta=0.9`,
-`relax=0.3`, `osc_weight=3.0`, and `exposure_target=0.1`.
+## Installation and reproduction
 
-## Installation
-
-Python 3.10 or later is required. Install dependencies from the repository root:
+Use Python 3.10 or later and a CUDA-capable PyTorch installation. The reported
+training environment uses Python 3.12 and PyTorch 2.8. Install dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 python -m pip install -e .
 ```
 
-The published evaluation runners request a CUDA device. Install a compatible
-PyTorch build for your GPU. Dataset loaders download data into `data/` on first
-use. For a CPU smoke run, use `train_run` with `device="cpu"`.
-
-## Using DAGC-V2
+Download the official FashionMNIST and CIFAR-10 training and test data into a
+local directory first. The confirmation engine uses `download=False` so that
+an unavailable dataset fails explicitly instead of changing a running job.
+For example:
 
 ```python
-from src.train import train_run
-
-result = train_run({
-    "dataset": "fashion_mnist",
-    "model": "small_cnn",
-    "optimizer": "sgd",
-    "device": "cuda",
-    "data_dir": "data",
-    "seed": 900,
-    "epochs": 15,
-    "batch_size": 256,
-    "lr": 0.8,
-    "momentum": 0.9,
-    "weight_decay": 1e-4,
-    "num_workers": 0,
-    "train_size": 5000,
-    "test_size": 2000,
-    "projection_dim": 8,
-    "clipping": {
-        "name": "dagc", "init_c": 0.5, "gamma": 0.05,
-        "beta": 0.9, "relax": 0.3, "osc_weight": 3.0,
-        "exposure_target": 0.1,
-    },
-})
-print(result["test_acc"])
+from torchvision.datasets import FashionMNIST, CIFAR10
+for dataset in (FashionMNIST, CIFAR10):
+    for train in (True, False):
+        dataset('data', train=train, download=True)
 ```
 
-## Held-out evaluation
-
-Each condition uses eight paired evaluation seeds, 5,000 training images,
-2,000 test images, 15 epochs, batch size 256, and SGD with momentum 0.9.
-Fixed thresholds are selected on separate calibration seeds. V2 is frozen after
-its development comparison. AGC uses coefficient 0.01.
-
-| Dataset / model | Learning rate | Fixed | AGC | DAGC-V1 | DAGC-V2 |
-|---|---:|---:|---:|---:|---:|
-| FashionMNIST / CNN | 0.4 | 86.76 ± 0.40 | 87.02 ± 0.70 | 83.18 ± 0.81 | **87.58 ± 0.63** |
-| FashionMNIST / CNN | 0.8 | 84.38 ± 1.19 | 84.95 ± 0.63 | 78.35 ± 4.67 | **86.56 ± 0.61** |
-| FashionMNIST / MLP | 0.8 | 82.59 ± 0.83 | 82.29 ± 1.12 | 77.51 ± 1.99 | **84.12 ± 0.52** |
-| MNIST / CNN | 0.8 | 97.23 ± 0.43 | 96.84 ± 0.36 | 85.19 ± 7.41 | **98.39 ± 0.15** |
-
-Values are test accuracy (%) with normal-approximation 95% confidence intervals.
-Unclipped runs have divergence rates of 87.5%, 100%, 100%, and 75%, respectively.
-
-![Held-out evaluation](results/figures/dagc_v2/heldout_accuracy.png)
+Launch the fixed study on eight GPUs (or specify fewer GPU IDs):
 
 ```bash
-python scripts/run_dagc_v2_evaluation.py --lr 0.8 --seeds 300 301 302 303 304 305 306 307
-python scripts/run_dagc_v2_evaluation.py --lr 0.4 --seeds 308 309 310 311 312 313 314 315
-python scripts/run_mlp_evaluation.py
-python scripts/run_mnist_evaluation.py
-python analysis/plot_dagc_v2_evaluations.py
+python -m scripts.run_confirmatory --root results/lyx1/raw/campaign \
+  --data-dir data --gpus 0,1,2,3,4,5,6,7
+python -m scripts.confirmatory_status --root results/lyx1/raw/campaign
 ```
 
-Archived LR 0.8 CNN results are in `results/dagc_v2_evaluation/`; the current
-runner writes to `results/dagc_v2_evaluation_lr0.8/`. The plotting script reads
-the archived results. Other conditions use their corresponding evaluation
-folders. Figures and aggregate data are in `results/figures/dagc_v2/`.
+An unchanged invocation reuses matching completed runs and resumes epoch
+checkpoints. Changes to source or configuration require a new output root.
+Do not launch two schedulers against the same root concurrently. Private random
+generators keep initialization, batches, and augmentation paired across
+policies. Nonfinite runs remain in accuracy aggregates at zero; finite
+chance-level outcomes remain at their observed accuracy.
 
-## Mechanism controls
+After the entire study completes:
 
-The mechanism experiment separates calibration seeds 800–802 from evaluation
-seeds 900–907. It compares eight policies using paired subsets, initialization,
-and minibatch order. Calibration selects a fixed threshold by clipping-intensity
-matching and produces a predetermined threshold schedule.
+```bash
+python -m scripts.export_confirmatory --root results/lyx1/raw/campaign \
+  --output results/lyx1/evidence
+python -m analysis.confirmatory_report
+bash scripts/build_paper.sh
+```
 
-| Policy | Accuracy (%) | Mean clipping intensity |
+The export checks run identities, condition settings, evaluation splits, seed
+coverage, epoch continuity, and failure accounting. The analysis produces
+seed-level tables, paired Student-t intervals, exact sign-flip tests with Holm
+correction, and figures. The paper build requires `pdflatex`/`bibtex` or
+`tectonic`. See [paper instructions](paper/README.md).
+
+## Method
+
+```text
+alpha = min(1, threshold / max(raw_gradient_norm, epsilon))
+clipped_gradient = alpha * raw_gradient
+E = beta * E + (1 - beta) * indicator(raw_gradient_norm > threshold)
+A = beta_a * A + (1 - beta_a) * consecutive_raw_gradient_alignment
+signal = relax * (reference - E) - direction_weight * max(0, -A)
+next_threshold = project(threshold * exp(gain * tanh(signal)), bounds)
+```
+
+Clipping is applied before the next threshold is computed. The bounds use
+0.1 and 10 times a rolling median of the last 200 raw gradient norms, with
+numerical floors. The frozen V2 parameters are `init_c=0.5`, `gamma=0.05`,
+`beta=beta_a=0.9`, `relax=0.3`, `osc_weight=3.0`, and `exposure_target=0.1`.
+The previous full gradient costs memory proportional to the parameter count.
+The V1 rule remains available as `exposure_target=None`.
+
+## Earlier exploratory evidence
+
+The earlier 5,000-training/2,000-test, 15-epoch runs used distinct training
+seeds for development and evaluation but reused the official test distribution
+for selection. They are exploratory evidence, not clean data-held-out
+confirmation. Their raw artifacts remain under `results/`.
+
+Recomputed paired 95% t intervals from the eight-seed mechanism study give:
+
+| DAGC minus comparator | Difference (percentage points) | 95% interval |
 |---|---:|---:|
-| Full V2 | 86.79 ± 0.55 | 0.798 |
-| No alignment | 86.63 ± 0.77 | 0.790 |
-| No exposure | 81.33 ± 1.03 | 0.399 |
-| Frozen multiplicative adaptation | 80.74 ± 0.86 | 0.346 |
-| Approximately intensity-matched fixed | 85.61 ± 0.77 | 0.762 |
-| Calibration-trace replay | 86.58 ± 0.46 | 0.789 |
-| AutoClip, tenth percentile | 79.88 ± 1.44 | 0.232 |
-| Specified rate-tracking analogue | 75.21 ± 1.57 | 0.160 |
+| Intensity-matched fixed | +1.18 | [0.62, 1.74] |
+| No alignment | +0.16 | [-0.33, 0.66] |
+| Calibration-trace replay | +0.21 | [-0.43, 0.86] |
+| No exposure | +5.47 | [4.04, 6.90] |
 
-V2 exceeds the matched fixed threshold by **1.18 ± 0.47 percentage points**
-(7/8 wins). Its paired advantage over the no-alignment variant is only
-**0.16 ± 0.41 points**, and over replay **0.21 ± 0.53 points**. These controls
-support exposure-driven protective threshold profiles, while leaving the
-necessity of direction feedback and the incremental benefit of online feedback
-unestablished. AutoClip and rate tracking are specified configurations without
-comprehensive tuning. The frozen variant retains moving scale bounds.
+These observations do not establish an incremental benefit from online
+alignment or threshold feedback. The learning-rate perturbations also leave
+replay competitive. The development reference sweep is now stratified by gain,
+with three seeds per setting; gains are not pooled as six independent
+replicates. Regenerate these corrections with:
 
 ```bash
-python scripts/run_v2_mechanism.py
+python -m analysis.confirmatory_report --legacy-only
+python -m analysis.plot_tau_sweep
 ```
 
-See [the complete protocol](docs/mechanism_experiments.md). Raw CSVs, paired
-summaries, the frozen calibration protocol, and per-run trajectory JSONs are
-in [results/v2_mechanism](results/v2_mechanism/).
+Older ZClip and AdaGC variants are excluded from the new comparison because
+their local implementations and changed warmup have not been verified as
+faithful reproductions. No claim about their published-default performance is
+made. Historical protocol documents and plots should be read in that context.
 
-## Learning-rate perturbations
-
-Independent paired seeds 1000–1007 compare full V2, no alignment, and the
-original unperturbed calibration-trace replay. All runs retain the same
-300-step budget and momentum state.
-
-| Perturbation | V2 accuracy (%) | Replay accuracy (%) | Paired V2 minus replay (pp) |
-|---|---:|---:|---:|
-| Pulse: 0.8 → 1.6 at step 100 → 0.8 at step 160 | 86.47 ± 0.59 | 86.53 ± 0.81 | −0.06 ± 0.54 |
-| Drop: 0.8 → 0.2 at step 100 | 86.88 ± 0.43 | 86.87 ± 0.65 | +0.01 ± 0.43 |
-
-Step indices are zero-based; changes occur before the indicated batch.
-Neither perturbation demonstrates an additional accuracy benefit from online
-feedback or alignment. Replay remains competitive under these tested changes.
-
-```bash
-python scripts/run_v2_lr_perturbation.py
-```
-
-The 48 run trajectories, frozen protocol, raw CSV, and paired summary are
-in [results/v2_lr_perturbation](results/v2_lr_perturbation/).
-
-## Earlier diagnostics
-
-Earlier A3 and A4 experiments examine the original controller at stable learning
-rates. A3 compares component removals; A4 contains 160 runs spanning datasets,
-architectures, optimizers, and clipping policies. These serve as development
-diagnostics and negative controls rather than V2 performance evidence.
-
-```bash
-python scripts/run_algorithm_benchmarks.py --suite a3
-python scripts/run_algorithm_benchmarks.py --suite a4
-python analysis/plot_algorithm_benchmarks.py
-```
-
-Results are in `results/a3_ablation_small/` and `results/a4_multiseed_small/`.
-The reference-level sweep is available through `analysis/plot_tau_sweep.py`.
-
-## Reproducibility
-
-Runners reuse completed seed-policy pairs or saved per-run JSONs. Running an
-unchanged protocol resumes safely; modified configurations require a fresh
-output directory to avoid reusing cached outcomes. Paired intervals use seeds
-as the unit of replication. Tests can be run with:
+## Tests and layout
 
 ```bash
 python -m pytest -q
 ```
 
-The evidence covers short, small-subset MNIST-family experiments. It supports
-claims within these protocols; it does not establish generalization to large
-models or fully tuned superiority over every adaptive baseline.
+The tests include data-split disjointness, independent augmentation randomness,
+causal clipping, exact epoch-resume agreement on synthetic data, stale-result
+rejection, paired inference, and multiplicity correction.
 
-## Repository layout
-
-```text
-src/         Training, clipping policies, models, and diagnostics
-scripts/     Development, calibration, and evaluation entry points
-analysis/    Statistical summaries and plots
-configs/     Experiment configuration files
-tests/       Unit tests
-docs/        Protocol and implementation documentation
-results/     Published experimental CSVs, logs, and figures
-notebooks/   Interactive experiments
-data/        Downloaded datasets (excluded from Git)
-```
+- `src/confirmatory.py`: independent full-data training engine.
+- `src/cifar_resnet.py`: CIFAR ResNet-20.
+- `configs/lyx1/protocol.json`: fixed experiment specification.
+- `scripts/run_confirmatory.py`: calibration and confirmation orchestration.
+- `analysis/confirmatory_report.py`: regenerated paper tables and figures.
+- `paper/`: English manuscript, styles, generated tables, and PDF.
 
 ## Authors and license
 
 Yuxin Li and Zisong Yuan. Released under the [MIT License](LICENSE).
-
-
-## Paper manuscript
-
-The current manuscript is available as [PDF](paper/main.pdf) and [LaTeX source](paper/main.tex). See [compilation instructions](paper/README.md).

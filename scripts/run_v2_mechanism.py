@@ -16,7 +16,7 @@ def run(label, seed, policy, phase):
         return json.loads(p.read_text())
     r = train_run(dict(BASE, seed=seed, clipping=policy))
     p.write_text(json.dumps(r, allow_nan=True))
-    print(f'{phase} {label} seed={seed}: {r['test_acc']:.4f} intensity={r['i_clip']:.3f}', flush=True)
+    print(f"{phase} {label} seed={seed}: {r['test_acc']:.4f} intensity={r['i_clip']:.3f}", flush=True)
     return r
 
 def main():
