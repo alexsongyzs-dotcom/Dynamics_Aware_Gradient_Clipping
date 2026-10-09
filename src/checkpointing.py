@@ -31,9 +31,9 @@ def capture_rng_state() -> dict[str, Any]:
 def restore_rng_state(state: dict[str, Any]) -> None:
     random.setstate(state["python"])
     np.random.set_state(state["numpy"])
-    torch.set_rng_state(state["torch_cpu"])
+    torch.set_rng_state(state["torch_cpu"].cpu())
     if torch.cuda.is_available() and "torch_cuda" in state:
-        torch.cuda.set_rng_state_all(state["torch_cuda"])
+        torch.cuda.set_rng_state_all([value.cpu() for value in state["torch_cuda"]])
 
 
 def build_checkpoint(
@@ -100,7 +100,9 @@ def load_checkpoint(
 ) -> tuple[ResumePosition, dict[str, Any]]:
     """Restore all available state and return the resume position and payload."""
 
-    payload = torch.load(Path(path), map_location=map_location, weights_only=False)
+    # RNG and sampler states must stay on CPU even when the model is on CUDA.
+    # load_state_dict moves model/optimizer tensors to their parameter devices.
+    payload = torch.load(Path(path), map_location="cpu", weights_only=False)
     if int(payload.get("schema_version", 0)) != 2:
         raise ValueError("unsupported checkpoint schema")
     model.load_state_dict(payload["model"])

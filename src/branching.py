@@ -64,6 +64,9 @@ def prepare_causal_branches(
     output_dir: str | Path,
     shuffle_seed: int,
     block_size: int = 50,
+    checkpoint_path: str | Path | None = None,
+    start_step: int = 0,
+    intervention_steps: int | None = None,
 ) -> Path:
     """Create causal sequences, complete branch configs, and a manifest."""
 
@@ -72,7 +75,23 @@ def prepare_causal_branches(
     destination = Path(output_dir).expanduser().resolve()
     destination.mkdir(parents=True, exist_ok=True)
 
-    rows = read_step_rows(reference_path)
+    all_rows = read_step_rows(reference_path)
+    rows = [row for row in all_rows if int(row["step"]) >= start_step]
+    if intervention_steps is not None:
+        rows = rows[:intervention_steps]
+    if not rows or int(rows[0]["step"]) != start_step:
+        raise ValueError("reference log does not cover the intervention start")
+    if [int(row["step"]) for row in rows] != list(range(start_step, start_step + len(rows))):
+        raise ValueError("reference intervention steps are not contiguous")
+    if intervention_steps is not None and len(rows) != intervention_steps:
+        raise ValueError("reference run ended before the declared intervention horizon")
+    if checkpoint_path is None:
+        raise ValueError("causal branches require an explicit shared checkpoint")
+    import torch
+    checkpoint_path = Path(checkpoint_path).resolve()
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if int(checkpoint["position"]["global_step"]) != start_step:
+        raise ValueError("checkpoint step does not match the intervention start")
     gains = _numeric(rows, "coefficient")
     target_norms = _numeric(rows, "applied_update_norm")
     sequences = {
@@ -89,6 +108,14 @@ def prepare_causal_branches(
     )
 
     base = load_config(base_path)
+    if base["clipping"]["name"] != "fixed":
+        raise ValueError("common continuation currently requires a stateless fixed reference policy")
+    from analysis.causal_branches import verify_gain_invariants
+    invariant_checks = {name: verify_gain_invariants(gains, sequences[name])
+                        for name in ("time_shuffled_gain", "block_shuffled_gain", "random_gate_gain")}
+    if not all(check[key] for check in invariant_checks.values()
+               for key in ("same_length", "same_multiset", "same_sum", "same_active_count")):
+        raise ValueError("intervention sequence failed its marginal invariants")
     branch_specs = {
         "reference_gain_replay_pre_moment": {
             "name": "frozen_gain",
@@ -123,16 +150,30 @@ def prepare_causal_branches(
             **clipping,
             "sequence_path": str(sequence_path),
             "repeat_last": False,
+            "start_step": start_step,
         }
+        if clipping["placement"] == "post_update":
+            # Exact norm matching can require enlargement on a diverging
+            # branch trajectory. Record that coefficient; do not silently cap.
+            clipping["allow_enlarge"] = True
         config = deep_merge(
             base,
             {
                 "run_id": branch_name,
+                "output_dir": str(destination / "runs"),
                 "clipping": clipping,
+                "checkpointing": {
+                    "resume_from": None, "branch_from": str(checkpoint_path),
+                    "directory": str(destination / "checkpoints"),
+                    "save_initial": False, "steps": [start_step + len(rows)],
+                },
                 "causal_branch": {
                     "reference_steps": str(reference_path),
                     "shuffle_seed": int(shuffle_seed),
                     "block_size": int(block_size),
+                    "intervention_start_step": start_step,
+                    "intervention_end_step": start_step + len(rows),
+                    "continuation_clipping": base["clipping"],
                 },
             },
         )
@@ -145,6 +186,8 @@ def prepare_causal_branches(
         "reference_steps": str(reference_path),
         "base_config": str(base_path),
         "number_of_steps": len(rows),
+        "checkpoint_path": str(checkpoint_path),
+        "start_step": start_step,
         "shuffle_seed": int(shuffle_seed),
         "block_size": int(block_size),
         "sequence_file": str(sequence_path),
@@ -152,12 +195,7 @@ def prepare_causal_branches(
             name: sequence_digest(values) for name, values in sequences.items()
         },
         "branch_configs": config_paths,
-        "invariants": {
-            "time_shuffle_preserves_gain_multiset": True,
-            "block_shuffle_preserves_gain_multiset": True,
-            "random_gate_preserves_active_gain_multiset": True,
-            "post_update_replays_reference_applied_update_norm": True,
-        },
+        "invariants": invariant_checks,
     }
     manifest_path = destination / "branch_manifest.json"
     manifest_path.write_text(

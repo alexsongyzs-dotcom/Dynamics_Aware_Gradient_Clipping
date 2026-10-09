@@ -1,0 +1,79 @@
+# Frozen before any scientific run in this campaign. Changes require a new output directory.
+name: lyx_full_20261009
+base_config: ../default.yaml
+screening:
+  epochs: 20
+  seeds: [0, 1]
+  thresholds: [0.1, 0.3, 1.0, 3.0, 10.0]
+  include_unclipped: true
+  families:
+    - name: fashion_cnn_sgd
+      dataset: fashion_mnist
+      model: small_cnn
+      optimizer: sgd
+      learning_rates: [0.05, 0.2, 0.4, 0.8]
+    - name: cifar_resnet_sgd
+      dataset: cifar10
+      model: resnet18
+      optimizer: sgd
+      learning_rates: [0.05, 0.1, 0.2, 0.4, 0.8]
+    - name: cifar_resnet_adamw
+      dataset: cifar10
+      model: resnet18
+      optimizer: adamw
+      learning_rates: [0.0003, 0.001, 0.003, 0.01]
+prediction:
+  horizon: 20
+  row_stride: 5
+  min_informative_runs: 10
+  minimum_auprc_increment: 0.01
+  bootstrap_samples: 5000
+  grouped_folds: 5
+  on_margins: [0.02, 0.05, 0.1]
+  off_margins: [0.02, 0.05, 0.1]
+  dwell_steps: [1, 3, 5]
+  minimum_robust_run_fraction: 0.75
+  maximum_relative_episode_range: 0.5
+causal:
+  epochs: 30
+  seeds: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]
+  start_step: 500
+  intervention_steps: 500
+  block_size: 50
+  minimum_accuracy_effect: 0.005
+  minimum_loss_effect: 0.02
+  minimum_failure_effect: 0.1
+  alpha: 0.05
+calibration:
+  epochs: 30
+  seeds: [200, 201, 202]
+  fixed: [0.1, 0.3, 1.0]
+  autoclip: [5.0, 10.0, 25.0]
+  agc: [0.005, 0.01, 0.05]
+  adagc: [0.8, 1.04, 1.5]
+  event_timed: [0.25, 0.5, 0.75]
+  stable_adamw_lr_multipliers: [0.5, 1.0, 2.0]
+confirmation:
+  epochs: 90
+  seeds: [300, 301, 302, 303, 304, 305, 306, 307, 308, 309]
+  accuracy_noninferiority_margin: 0.005
+  loss_noninferiority_margin: 0.02
+  minimum_failure_improvement: 0.1
+  minimum_adverse_event_improvement: 1.0
+scale:
+  dataset: cifar100
+  model: resnet34
+  epochs: 120
+  calibration_seeds: [400, 401, 402]
+  seeds: [500, 501, 502, 503, 504, 505, 506, 507, 508, 509]
+training:
+  batch_size: 128
+  cpu_threads: 4
+  num_workers: 0
+  deterministic: true
+  validation_size: 5000
+  split_seed: 1729
+  probe_size: 512
+  gradient_sketch_size: 64
+  checkpoint_every_epochs: 0
+  failure_loss: 100.0

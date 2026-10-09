@@ -9,6 +9,12 @@ prediction, and causal gates.
 The revised Chinese review and research plan is in
 [`docs/paper_idea_review_and_revised_plan_cn.md`](docs/paper_idea_review_and_revised_plan_cn.md).
 
+The `develop/lyx` execution protocol, full-data training budgets, disjoint
+calibration/confirmation seeds, and numerical gates are documented in
+[`docs/server30_protocol.md`](docs/server30_protocol.md). Run the complete gated
+campaign with `scripts/run_research_campaign.py --execute`; the required output
+and data directories are explicit command-line arguments.
+
 ## Main claim under test
 
 For vanilla SGD, multiplying an update by the global clipping coefficient is

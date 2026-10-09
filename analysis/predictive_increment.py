@@ -43,6 +43,11 @@ def add_forward_event_target(
         valid_stop = max(0, len(events) - horizon)
         if valid_stop:
             result.loc[positions[:valid_stop], output_column] = target[:valid_stop]
+        # A failure actually observed before a run terminates is a known
+        # positive, even without an entire horizon of subsequent observations.
+        # Only unresolved negatives at the right boundary are censored.
+        positive_positions = positions[target > 0]
+        result.loc[positive_positions, output_column] = 1
     return result
 
 
@@ -96,12 +101,17 @@ def grouped_predictive_increment(
     fold_rows = []
     prediction_rows = []
     for fold, (train_indices, test_indices) in enumerate(splitter.split(data, target, groups)):
+        if len(np.unique(target[train_indices])) < 2:
+            for model_name in feature_sets:
+                fold_rows.append({"fold": fold, "model": model_name, "status": "single_class_training",
+                                  **dict.fromkeys(("auprc", "auroc", "brier", "log_loss"), float("nan"))})
+            continue
         for model_name, features in feature_sets.items():
             model = _model()
             model.fit(data.loc[train_indices, features], target[train_indices])
             probability = model.predict_proba(data.loc[test_indices, features])[:, 1]
             metrics = _metrics(target[test_indices], probability)
-            fold_rows.append({"fold": fold, "model": model_name, **metrics})
+            fold_rows.append({"fold": fold, "model": model_name, "status": "ok", **metrics})
             prediction_rows.extend(
                 {
                     "row_index": int(index),

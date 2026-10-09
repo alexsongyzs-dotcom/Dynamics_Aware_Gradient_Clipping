@@ -18,6 +18,7 @@ from collections import deque
 from dataclasses import asdict, dataclass
 from enum import Enum
 import csv
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -48,6 +49,7 @@ class PolicyContext:
     alignment: float = math.nan
     moment_mismatch: float = math.nan
     update_norm: float = math.nan
+    history_features: dict[str, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -139,7 +141,7 @@ def scale_gradients_(parameters: Iterable[Tensor], coefficient: float) -> None:
 
 
 def apply_agc_(parameters: Iterable[Tensor], clip_value: float = 0.01, eps: float = 1e-3) -> float:
-    """Apply unit/tensor-wise Adaptive Gradient Clipping in place.
+    """Apply unit-wise Adaptive Gradient Clipping in place.
 
     Returns the smallest coefficient applied to any tensor for logging. Bias
     and one-dimensional tensors use their complete tensor norms.
@@ -149,14 +151,14 @@ def apply_agc_(parameters: Iterable[Tensor], clip_value: float = 0.01, eps: floa
     for parameter in parameters:
         if parameter.grad is None:
             continue
-        parameter_norm = torch.linalg.vector_norm(parameter.detach()).clamp_min(eps)
+        dimensions = tuple(range(1, parameter.ndim)) if parameter.ndim > 1 else None
+        parameter_norm = torch.linalg.vector_norm(parameter.detach(), dim=dimensions, keepdim=dimensions is not None).clamp_min(eps)
         gradient_value = parameter.grad.detach()
-        grad_value_norm = torch.linalg.vector_norm(gradient_value)
+        grad_value_norm = torch.linalg.vector_norm(gradient_value, dim=dimensions, keepdim=dimensions is not None)
         maximum_norm = parameter_norm * clip_value
-        coefficient = float(torch.clamp(maximum_norm / (grad_value_norm + EPS), max=1.0))
-        if coefficient < 1.0:
-            parameter.grad.mul_(coefficient)
-        minimum = min(minimum, coefficient)
+        coefficient = torch.clamp(maximum_norm / (grad_value_norm + EPS), max=1.0)
+        parameter.grad.mul_(coefficient)
+        minimum = min(minimum, float(coefficient.min()))
     return minimum
 
 
@@ -189,11 +191,7 @@ def apply_post_update_decision_(
     if len(parameters) != len(before):
         raise ValueError("parameter snapshot does not match parameter list")
 
-    raw_sq = 0.0
-    for parameter, old in zip(parameters, before):
-        delta = parameter.detach() - old
-        raw_sq += float(torch.sum(delta * delta))
-    raw_norm = math.sqrt(raw_sq)
+    raw_norm = parameter_update_norm(parameters, before)
 
     if decision.target_update_norm is not None:
         coefficient = decision.target_update_norm / (raw_norm + EPS)
@@ -208,7 +206,7 @@ def apply_post_update_decision_(
             parameter.copy_(old + coefficient * (parameter - old))
     return UpdateApplication(
         raw_update_norm=raw_norm,
-        applied_update_norm=raw_norm * coefficient,
+        applied_update_norm=parameter_update_norm(parameters, before),
         coefficient=coefficient,
     )
 
@@ -218,11 +216,8 @@ def parameter_update_norm(parameters: Sequence[Tensor], before: Sequence[Tensor]
 
     if len(parameters) != len(before):
         raise ValueError("parameter snapshot does not match parameter list")
-    squared = 0.0
-    for parameter, old in zip(parameters, before):
-        delta = parameter.detach() - old
-        squared += float(torch.sum(delta * delta))
-    return math.sqrt(squared)
+    squares = [(parameter.detach() - old).square().sum() for parameter, old in zip(parameters, before)]
+    return float(torch.stack(squares).sum().sqrt()) if squares else 0.0
 
 
 class GainPolicy(ABC):
@@ -384,21 +379,25 @@ class FrozenGainPolicy(GainPolicy):
 
     name = "frozen_gain"
 
-    def __init__(self, gains: Sequence[float], repeat_last: bool = False) -> None:
+    def __init__(self, gains: Sequence[float], repeat_last: bool = False, start_step: int = 0) -> None:
         if not gains:
             raise ValueError("frozen gain sequence must be non-empty")
         if any(not 0.0 <= float(value) <= 1.0 for value in gains):
             raise ValueError("all frozen gains must be in [0, 1]")
         self.gains = [float(value) for value in gains]
         self.repeat_last = bool(repeat_last)
+        self.start_step = int(start_step)
 
     def decide(self, context: PolicyContext) -> ClipDecision:
-        if context.step >= len(self.gains):
+        index = context.step - self.start_step
+        if index < 0:
+            raise ValueError("frozen gain requested before its declared start step")
+        if index >= len(self.gains):
             if not self.repeat_last:
                 raise IndexError("frozen gain sequence exhausted")
             coefficient = self.gains[-1]
         else:
-            coefficient = self.gains[context.step]
+            coefficient = self.gains[index]
         threshold = coefficient * context.grad_norm if coefficient < 1.0 else math.inf
         return ClipDecision(
             coefficient=coefficient,
@@ -413,19 +412,23 @@ class FrozenTargetNormPolicy(GainPolicy):
 
     name = "frozen_target_norm"
 
-    def __init__(self, target_norms: Sequence[float], repeat_last: bool = False) -> None:
+    def __init__(self, target_norms: Sequence[float], repeat_last: bool = False, start_step: int = 0) -> None:
         if not target_norms or any(float(value) < 0.0 for value in target_norms):
             raise ValueError("target norm sequence must be non-empty and non-negative")
         self.target_norms = [float(value) for value in target_norms]
         self.repeat_last = bool(repeat_last)
+        self.start_step = int(start_step)
 
     def decide(self, context: PolicyContext) -> ClipDecision:
-        if context.step >= len(self.target_norms):
+        index = context.step - self.start_step
+        if index < 0:
+            raise ValueError("target norm requested before its declared start step")
+        if index >= len(self.target_norms):
             if not self.repeat_last:
                 raise IndexError("target norm sequence exhausted")
             target = self.target_norms[-1]
         else:
-            target = self.target_norms[context.step]
+            target = self.target_norms[index]
         return ClipDecision(
             target_update_norm=target,
             active=True,
@@ -524,6 +527,51 @@ class EventTimedClippingPolicy(GainPolicy):
         self.state_age = int(state["state_age"])
 
 
+class PredictiveEventClippingPolicy(EventTimedClippingPolicy):
+    """Contingent controller driven by 1-2 frozen, validated history signals.
+
+    The risk model is fitted on screening runs only. At step t it receives
+    history through t-1, then applies a hysteretic running-quantile threshold.
+    It is intentionally distinct from the unvalidated heuristic above.
+    """
+
+    name = "predictive_event"
+
+    def __init__(self, predictor: dict, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.predictor = predictor
+        if not 1 <= len(predictor["features"]) <= 2:
+            raise ValueError("the frozen controller must use one or two history signals")
+
+    def decide(self, context: PolicyContext) -> ClipDecision:
+        self.norm_history.append(float(context.grad_norm))
+        if len(self.norm_history) < self.warmup:
+            return ClipDecision(source=self.name, controller_state=self.state)
+        features = context.history_features or {}
+        score = float(self.predictor["intercept"])
+        for name, median, center, scale, weight in zip(
+            self.predictor["features"], self.predictor["medians"], self.predictor["means"],
+            self.predictor["scales"], self.predictor["coefficients"],
+        ):
+            value = float(features.get(name, median))
+            value = value if math.isfinite(value) else median
+            score += weight * (value - center) / scale
+        probability = 1.0 / (1.0 + math.exp(-max(-60.0, min(60.0, score))))
+        hazard = probability / max(float(self.predictor["reference_probability"]), 1e-6)
+        on_threshold = 1.0 - 0.5 * self.aggressiveness
+        if self.state == "normal" and hazard > on_threshold:
+            self.state, self.state_age = "protect", 0
+        elif self.state == "protect" and self.state_age >= self.min_dwell_steps and hazard < 0.5 * on_threshold:
+            self.state, self.state_age = "normal", 0
+        else:
+            self.state_age += 1
+        quantile = 0.99 if self.state == "normal" else 0.90 - 0.50 * self.aggressiveness
+        threshold = float(torch.quantile(torch.tensor(list(self.norm_history), dtype=torch.float64), quantile))
+        coefficient = min(1.0, threshold / (context.grad_norm + EPS))
+        return ClipDecision(coefficient=coefficient, threshold=threshold, active=coefficient < 1.0,
+                            source=self.name, controller_state=self.state, hazard=hazard)
+
+
 def make_time_shuffled_gains(gains: Sequence[float], seed: int) -> list[float]:
     """Randomly permute a gain multiset while preserving every value."""
 
@@ -607,15 +655,25 @@ def build_policy(config: dict) -> GainPolicy:
             gains = make_block_shuffled_gains(gains, seed, int(config.get("block_size", 10)))
         elif name == "random_gate":
             gains = make_random_gate_gains(gains, seed)
-        return FrozenGainPolicy(gains, repeat_last=bool(config.get("repeat_last", False)))
+        return FrozenGainPolicy(gains, repeat_last=bool(config.get("repeat_last", False)), start_step=int(config.get("start_step", 0)))
     if name == "frozen_target_norm":
         targets = load_numeric_sequence(config["sequence_path"], config.get("field", "applied_update_norm"))
-        return FrozenTargetNormPolicy(targets, repeat_last=bool(config.get("repeat_last", False)))
+        return FrozenTargetNormPolicy(targets, repeat_last=bool(config.get("repeat_last", False)), start_step=int(config.get("start_step", 0)))
     if name == "event_timed":
         return EventTimedClippingPolicy(
             aggressiveness=float(config.get("aggressiveness", 0.5)),
             window=int(config.get("window", 200)),
             warmup=int(config.get("warmup", 50)),
+            min_dwell_steps=int(config.get("min_dwell_steps", 5)),
+        )
+    if name == "predictive_event":
+        source = Path(config["predictor_path"])
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        if digest != config["predictor_sha256"]:
+            raise ValueError("frozen predictor digest does not match the run configuration")
+        return PredictiveEventClippingPolicy(
+            json.loads(source.read_text()), aggressiveness=float(config.get("aggressiveness", 0.5)),
+            window=int(config.get("window", 200)), warmup=int(config.get("warmup", 50)),
             min_dwell_steps=int(config.get("min_dwell_steps", 5)),
         )
     if name == "agc":

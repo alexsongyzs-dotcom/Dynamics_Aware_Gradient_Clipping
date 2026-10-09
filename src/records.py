@@ -69,6 +69,8 @@ class RunRecorder:
         self.steps_path = self.output_dir / f"{self.run_id}.steps.jsonl"
         self.summary_path = self.output_dir / f"{self.run_id}.summary.json"
         self.manifest_path = self.output_dir / f"{self.run_id}.manifest.json"
+        self._stream = None
+        self._pending_rows = 0
         existing = [
             path
             for path in (self.steps_path, self.summary_path, self.manifest_path)
@@ -102,10 +104,62 @@ class RunRecorder:
             "config_hash": self.config_hash,
             **row,
         }
-        with self.steps_path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(_json_value(payload), ensure_ascii=False, sort_keys=True) + "\n")
+        if self._stream is None:
+            self._stream = self.steps_path.open("a", encoding="utf-8", buffering=1024 * 1024)
+        self._stream.write(json.dumps(_json_value(payload), ensure_ascii=False, sort_keys=True) + "\n")
+        self._pending_rows += 1
+        if self._pending_rows >= 64:
+            self.flush()
+
+    def flush(self) -> None:
+        if self._stream is not None:
+            self._stream.flush()
+        self._pending_rows = 0
+
+    def close(self) -> None:
+        self.flush()
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+
+    def reconcile_checkpoint(self, next_step: int) -> list[dict[str, Any]]:
+        """Resume at exactly a checkpoint, preserving any abandoned log suffix.
+
+        A process can write rows after its latest checkpoint and then die. Keep
+        those rows as a separate audit artifact rather than duplicating them in
+        the resumed trajectory or silently deleting them.
+        """
+        if not self.steps_path.exists():
+            return []
+        lines = self.steps_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        kept, abandoned, rows = [], [], []
+        for index, line in enumerate(lines):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                if index != len(lines) - 1:
+                    raise
+                abandoned.append(line)
+                continue
+            if int(row["step"]) < next_step:
+                kept.append(line)
+                rows.append(row)
+            else:
+                abandoned.append(line)
+        if rows and int(rows[-1]["step"]) != next_step - 1:
+            raise ValueError("checkpoint is ahead of the recorded trajectory")
+        if abandoned:
+            suffix = self.steps_path.with_name(self.steps_path.name + f".after-{next_step}.bak")
+            if suffix.exists():
+                suffix = suffix.with_name(suffix.name + f".{len(list(self.output_dir.glob(suffix.name + '*')))}")
+            suffix.write_text("".join(abandoned), encoding="utf-8")
+            temporary = self.steps_path.with_suffix(".resume.tmp")
+            temporary.write_text("".join(kept), encoding="utf-8")
+            temporary.replace(self.steps_path)
+        return rows
 
     def write_summary(self, summary: dict[str, Any]) -> None:
+        self.flush()
         payload = {
             "schema_version": SCHEMA_VERSION,
             "run_id": self.run_id,

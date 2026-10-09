@@ -17,3 +17,10 @@ def test_forward_target_uses_only_future_steps_within_each_run() -> None:
     np.testing.assert_array_equal(result.loc[:2, "future_event"], [1.0, 1.0, 0.0])
     np.testing.assert_array_equal(result.loc[5:7, "future_event"], [1.0, 0.0, 0.0])
     assert result.loc[[3, 4, 8, 9], "future_event"].isna().all()
+
+
+def test_observed_failure_is_not_lost_to_right_censoring() -> None:
+    frame = pd.DataFrame({"run_id": ["short"] * 3, "event": [0, 0, 1]})
+    result = add_forward_event_target(frame, event_column="event", horizon=20)
+    np.testing.assert_array_equal(result.loc[:1, "future_event"], [1.0, 1.0])
+    assert np.isnan(result.loc[2, "future_event"])

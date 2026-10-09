@@ -40,13 +40,17 @@ After a reference run completes, generate branch inputs without training:
 ```bash
 python scripts/prepare_branches.py \
   --reference-steps results/p2_causal_reference/<run>.steps.jsonl \
+  --base-config <reference-config.yaml> \
+  --checkpoint results/checkpoints/<run>.step-500.pt \
+  --start-step 500 --intervention-steps 500 \
   --shuffle-seed 1000 \
   --output results/branches/seed-1000
 ```
 
 Inspect `branch_manifest.json` and verify the sequence hashes and invariants.
 Run each generated YAML through `python -m src.train --config <file>` only
-after G1 and G2 have passed.
+after G1 has passed and the generated sequence invariants have been checked.
+These branch experiments produce the evidence used to decide G2.
 
 ## 5. Safety-gated convenience entrypoint
 

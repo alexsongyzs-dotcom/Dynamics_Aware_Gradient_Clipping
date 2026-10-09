@@ -53,8 +53,8 @@ class StatefulRandomSampler(Sampler[int]):
             raise ValueError("sampler state belongs to a different dataset")
         self.epoch = int(state["epoch"])
         self.cursor = int(state["cursor"])
-        self.permutation = permutation.clone()
-        self.generator.set_state(generator_state)
+        self.permutation = permutation.cpu().clone()
+        self.generator.set_state(generator_state.cpu())
 
 
 @dataclass(frozen=True)
@@ -129,6 +129,9 @@ def build_data_bundle(
     probe_size: int = 1024,
     download: bool = False,
     pin_memory: bool = True,
+    validation_size: int = 0,
+    split_seed: int = 1729,
+    evaluation_split: str = "test",
 ) -> DataBundle:
     """Create training, evaluation, and fixed-probe loaders.
 
@@ -141,9 +144,26 @@ def build_data_bundle(
     built = _datasets(dataset, root, download)
     if len(built) == 4:
         train_set, test_set, num_classes, input_channels = built
-        probe_set = test_set
+        # Diagnostics must not repeatedly inspect the held-out test images.
+        probe_set = train_set
     else:
         train_set, test_set, num_classes, input_channels, probe_set = built
+
+    if evaluation_split not in {"test", "validation"}:
+        raise ValueError("evaluation_split must be test or validation")
+    if validation_size:
+        if not 0 < validation_size < len(train_set):
+            raise ValueError("validation_size must leave nonempty training data")
+        split = torch.randperm(len(train_set), generator=torch.Generator().manual_seed(split_seed))
+        validation_indices = split[:validation_size].tolist()
+        training_indices = split[validation_size:].tolist()
+        validation_set = Subset(probe_set, validation_indices)
+        train_set = Subset(train_set, training_indices)
+        probe_set = Subset(probe_set, training_indices)
+        if evaluation_split == "validation":
+            test_set = validation_set
+    elif evaluation_split == "validation":
+        raise ValueError("validation evaluation requires validation_size > 0")
 
     sampler = StatefulRandomSampler(train_set, seed)
     loader_generator = torch.Generator().manual_seed(seed + 1)
@@ -174,6 +194,7 @@ def build_data_bundle(
         shuffle=False,
         num_workers=0,
         pin_memory=pin_memory,
+        generator=torch.Generator().manual_seed(seed + 4),
     )
     return DataBundle(
         train_loader=train_loader,

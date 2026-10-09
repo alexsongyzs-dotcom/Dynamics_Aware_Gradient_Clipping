@@ -260,8 +260,8 @@ def adam_second_moment_mismatch(
     """RMS(raw gradient) divided by RMS of Adam's debiased second moment."""
 
     selected = {id(parameter) for parameter in parameters}
-    grad_sq_sum = 0.0
-    moment_sum = 0.0
+    gradient_squares = []
+    moment_sums = []
     count = 0
     found = False
     for group in optimizer.param_groups:
@@ -278,11 +278,12 @@ def adam_second_moment_mismatch(
             correction = 1.0 - beta2**step if step > 0 else 1.0
             found = True
             grad = parameter.grad.detach()
-            grad_sq_sum += float(torch.sum(grad * grad))
-            moment_sum += float(torch.sum(second.detach() / max(correction, EPS)))
+            gradient_squares.append(torch.sum(grad * grad))
+            moment_sums.append(torch.sum(second.detach()) / max(correction, EPS))
             count += grad.numel()
     if not found or count == 0:
         return math.nan
+    grad_sq_sum, moment_sum = torch.stack([torch.stack(gradient_squares).sum(), torch.stack(moment_sums).sum()]).tolist()
     return math.sqrt((grad_sq_sum / count + EPS) / (moment_sum / count + EPS))
 
 
@@ -291,9 +292,7 @@ def momentum_buffer_alignment(
 ) -> float:
     """Cosine similarity between current gradients and SGD momentum buffers."""
 
-    numerator = 0.0
-    grad_sq = 0.0
-    buffer_sq = 0.0
+    products, gradient_squares, buffer_squares = [], [], []
     found = False
     for parameter, state in _parameter_state_pairs(parameters, optimizer):
         buffer = state.get("momentum_buffer")
@@ -302,11 +301,12 @@ def momentum_buffer_alignment(
         found = True
         grad = parameter.grad.detach()
         buf = buffer.detach()
-        numerator += float(torch.sum(grad * buf))
-        grad_sq += float(torch.sum(grad * grad))
-        buffer_sq += float(torch.sum(buf * buf))
+        products.append(torch.sum(grad * buf))
+        gradient_squares.append(torch.sum(grad * grad))
+        buffer_squares.append(torch.sum(buf * buf))
     if not found:
         return math.nan
+    numerator, grad_sq, buffer_sq = torch.stack([torch.stack(products).sum(), torch.stack(gradient_squares).sum(), torch.stack(buffer_squares).sum()]).tolist()
     denominator = math.sqrt(grad_sq * buffer_sq)
     return 0.0 if denominator <= EPS else numerator / denominator
 

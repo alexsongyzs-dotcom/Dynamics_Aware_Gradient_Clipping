@@ -23,6 +23,9 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=ROOT / "results/branches")
     parser.add_argument("--shuffle-seed", type=int, required=True)
     parser.add_argument("--block-size", type=int, default=50)
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--start-step", type=int, default=0)
+    parser.add_argument("--intervention-steps", type=int)
     args = parser.parse_args()
     manifest = prepare_causal_branches(
         reference_steps=args.reference_steps,
@@ -30,6 +33,9 @@ def main() -> None:
         output_dir=args.output,
         shuffle_seed=args.shuffle_seed,
         block_size=args.block_size,
+        checkpoint_path=args.checkpoint,
+        start_step=args.start_step,
+        intervention_steps=args.intervention_steps,
     )
     print(f"branch manifest: {manifest}")
     print("configuration generation only; no branch was trained")

@@ -10,14 +10,16 @@ from __future__ import annotations
 import argparse
 import copy
 import math
+import os
 from pathlib import Path
 import random
+import time
 from typing import Any
 
 import numpy as np
 import torch
 import torch.nn as nn
-from src.checkpointing import build_checkpoint, load_checkpoint, save_checkpoint
+from src.checkpointing import build_checkpoint, capture_rng_state, load_checkpoint, restore_rng_state, save_checkpoint
 from src.clipping import (
     AdaGCPolicy,
     ClipDecision,
@@ -144,7 +146,7 @@ def evaluate(model: nn.Module, loader, loss_fn: nn.Module, device: torch.device)
     return {"loss": total_loss / max(count, 1), "accuracy": correct / max(count, 1)}
 
 
-def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
+def train_run(config: dict, verbose: bool = False, *, stop_after_steps: int | None = None) -> dict[str, Any]:
     """Execute one declared run and return a compact summary.
 
     This function is intentionally explicit about intervention placement and
@@ -152,6 +154,9 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
     """
 
     cfg = copy.deepcopy(config)
+    started_at = time.monotonic()
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    torch.set_num_threads(int(cfg.get("cpu_threads", 4)))
     seed = int(cfg.get("seed", 0))
     set_seed(seed, deterministic=bool(cfg.get("deterministic", False)))
     device = _device(str(cfg.get("device", "cuda")))
@@ -173,6 +178,9 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
         probe_size=int(logging_cfg.get("probe_size", 1024)),
         download=bool(dataset_cfg.get("download", False)),
         pin_memory=bool(cfg.get("pin_memory", True)),
+        validation_size=int(dataset_cfg.get("validation_size", 0)),
+        split_seed=int(dataset_cfg.get("split_seed", 1729)),
+        evaluation_split=str(dataset_cfg.get("evaluation_split", "test")),
     )
     image_size = 28 if dataset_cfg.get("name") in {"mnist", "fashion_mnist"} else 32
     model_kwargs = {key: value for key, value in model_cfg.items() if key not in {"name", "num_classes", "pretrained"}}
@@ -215,12 +223,22 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
     )
     previous_gradient_sketch: torch.Tensor | None = None
     previous_probe_gradient_sketch: torch.Tensor | None = None
+    previous_gradient: torch.Tensor | None = None
+    full_alignment = bool(logging_cfg.get("full_gradient_alignment", True))
     fixed_probe_batch = next(iter(bundle.probe_loader))
 
     run_id = str(cfg.get("run_id", f"run-{config_hash(cfg)}-seed{seed}"))
     start_epoch = 0
     global_step = 0
     resume_path = checkpoint_cfg.get("resume_from")
+    branch_path = checkpoint_cfg.get("branch_from")
+    # branch_from remains immutable provenance when an interrupted branch is
+    # resumed from its own later checkpoint; resume_from takes precedence.
+    if (resume_path or branch_path) and int(cfg.get("num_workers", 0)) != 0:
+        raise ValueError("exact checkpoint branches require num_workers=0")
+    loss_ema = None
+    skip_resumed_epoch_batches = False
+    prior_hessian_records = []
     recorder = None
     if cfg.get("output_dir"):
         recorder = RunRecorder(
@@ -229,13 +247,13 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
             cfg,
             append_existing=bool(resume_path),
         )
-    if resume_path:
+    if resume_path or branch_path:
         position, payload = load_checkpoint(
-            resume_path,
+            resume_path or branch_path,
             model=model,
             optimizer=optimizer,
             scheduler=scheduler,
-            policy=policy,
+            policy=policy if resume_path else None,
             sampler=bundle.train_sampler,
             episode_tracker=episode_tracker,
             history_tracker=history_tracker,
@@ -243,25 +261,65 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
         )
         start_epoch = position.epoch
         global_step = position.global_step
+        if scheduler is not None and global_step:
+            # The scheduler's first-step warning uses a runtime-only flag.
+            # Restored optimizer updates happened before this process began.
+            optimizer._opt_called = True
         previous = payload.get("metadata", {}).get("previous_gradient_sketch")
         if isinstance(previous, torch.Tensor):
             previous_gradient_sketch = previous.to(device)
         previous_probe = payload.get("metadata", {}).get("previous_probe_gradient_sketch")
         if isinstance(previous_probe, torch.Tensor):
             previous_probe_gradient_sketch = previous_probe.to(device)
+        previous_full = payload.get("metadata", {}).get("previous_gradient")
+        if isinstance(previous_full, torch.Tensor):
+            previous_gradient = previous_full.to(device)
+        loss_ema = payload.get("metadata", {}).get("loss_ema")
+        skip_resumed_epoch_batches = bool(payload.get("metadata", {}).get("epoch_training_complete", False))
+        prior_hessian_records = payload.get("metadata", {}).get("hessian_records", [])
 
-    rows: list[dict[str, Any]] = []
-    hessian_records: list[dict[str, float | int | str]] = []
+    rows: list[dict[str, Any]] = recorder.reconcile_checkpoint(global_step) if resume_path and recorder else []
+    hessian_records: list[dict[str, float | int | str]] = list(prior_hessian_records)
     hessian_epochs = {int(value) for value in logging_cfg.get("hessian_checkpoints", [])}
     checkpoint_steps = {int(value) for value in checkpoint_cfg.get("steps", [])}
     checkpoint_every_epochs = int(checkpoint_cfg.get("every_epochs", 0))
     checkpoint_dir = Path(checkpoint_cfg.get("directory", "results/checkpoints"))
     failed = False
     failure_reason = ""
+    paused = False
+    max_steps = int(cfg.get("max_steps", 0)) or None
+    branch_cfg = dict(cfg.get("causal_branch", {}))
+    intervention_end = branch_cfg.get("intervention_end_step")
+    continuation_cfg = branch_cfg.get("continuation_clipping")
+    continuation_policy = build_policy(continuation_cfg) if continuation_cfg else None
+    evaluation_history = []
+
+    def checkpoint(position_epoch: int, *, epoch_training_complete: bool = False) -> dict:
+        if recorder is not None:
+            recorder.flush()
+        return build_checkpoint(
+            model=model, optimizer=optimizer, scheduler=scheduler, policy=policy,
+            sampler=bundle.train_sampler, episode_tracker=episode_tracker,
+            history_tracker=history_tracker, epoch=position_epoch, global_step=global_step,
+            config=cfg, metadata={
+                "previous_gradient_sketch": None if previous_gradient_sketch is None else previous_gradient_sketch.detach().cpu(),
+                "previous_gradient": None if previous_gradient is None else previous_gradient.detach().cpu(),
+                "previous_probe_gradient_sketch": None if previous_probe_gradient_sketch is None else previous_probe_gradient_sketch.detach().cpu(),
+                "loss_ema": loss_ema,
+                "hessian_records": hessian_records,
+                "epoch_training_complete": epoch_training_complete,
+            },
+        )
+
+    if bool(checkpoint_cfg.get("save_initial", False)) and not (resume_path or branch_path):
+        save_checkpoint(checkpoint_dir / f"{run_id}.initial.pt", checkpoint(0))
 
     model.train()
     for epoch in range(start_epoch, epochs):
-        for inputs, targets in bundle.train_loader:
+        batches = () if epoch == start_epoch and skip_resumed_epoch_batches else bundle.train_loader
+        for inputs, targets in batches:
+            if max_steps is not None and global_step >= max_steps:
+                break
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad(set_to_none=True)
             logits = model(inputs)
@@ -269,17 +327,35 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
             if not torch.isfinite(loss):
                 failed = True
                 failure_reason = "non_finite_loss"
+                failure_row = {"epoch": epoch, "step": global_step, "loss": float(loss.detach()),
+                               "adverse_event": True, "failed": True, "optimizer_step_applied": False}
+                rows.append(failure_row)
+                if recorder is not None:
+                    recorder.append_step(failure_row)
                 break
             loss.backward()
 
             raw_gradient = flatten_gradients(parameters)
             raw_grad_norm = float(torch.linalg.vector_norm(raw_gradient))
+            if not math.isfinite(raw_grad_norm):
+                failed = True
+                failure_reason = "non_finite_gradient"
+                failure_row = {"epoch": epoch, "step": global_step, "loss": float(loss.detach()),
+                               "raw_grad_norm": raw_grad_norm, "adverse_event": True,
+                               "failed": True, "optimizer_step_applied": False}
+                rows.append(failure_row)
+                if recorder is not None:
+                    recorder.append_step(failure_row)
+                break
             gradient_sketch = sketcher(raw_gradient)
-            alignment = (
+            sketch_alignment = (
                 math.nan
                 if previous_gradient_sketch is None
                 else gradient_alignment(gradient_sketch, previous_gradient_sketch)
             )
+            alignment = (math.nan if previous_gradient is None else gradient_alignment(raw_gradient, previous_gradient)) if full_alignment else sketch_alignment
+            if full_alignment:
+                previous_gradient = raw_gradient.detach().clone()
             previous_gradient_sketch = gradient_sketch.detach().clone()
             state_metrics = optimizer_state_metrics(parameters, optimizer)
             mismatch = state_metrics["adam_second_moment_mismatch"]
@@ -289,44 +365,61 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
                 loss=float(loss.detach()),
                 alignment=alignment,
                 moment_mismatch=mismatch,
+                history_features={
+                    "exposure_ema": history_tracker._ema,
+                    "duty_cycle": sum(history_tracker._states) / max(1, len(history_tracker._states)),
+                    "switch_rate": sum(history_tracker._transitions) / max(1, len(history_tracker._transitions)),
+                    "burst_age": episode_tracker.dwell_steps,
+                    "time_since_transition": global_step - 1 - episode_tracker.last_transition_step if episode_tracker.last_transition_step >= 0 else global_step,
+                    "mean_intensity": sum(history_tracker._intensities) / max(1, len(history_tracker._intensities)),
+                },
             )
-            decision = policy.decide(context)
+            current_policy = policy
+            current_placement = placement
+            current_clipping_cfg = clipping_cfg
+            if continuation_policy is not None and global_step >= int(intervention_end):
+                current_policy = continuation_policy
+                current_clipping_cfg = continuation_cfg
+                current_placement = ClippingPlacement(continuation_cfg.get("placement", "pre_moment"))
+            decision = current_policy.decide(context)
 
             before = snapshot_parameters(parameters)
-            if clipping_cfg.get("name") == "agc":
-                coefficient = apply_agc_(
+            if current_clipping_cfg.get("name") == "agc":
+                minimum_coefficient = apply_agc_(
                     parameters,
-                    clip_value=float(clipping_cfg.get("clip_value", 0.01)),
-                    eps=float(clipping_cfg.get("eps", 1e-3)),
+                    clip_value=float(current_clipping_cfg.get("clip_value", 0.01)),
+                    eps=float(current_clipping_cfg.get("eps", 1e-3)),
                 )
+                coefficient = min(1.0, gradient_norm(parameters) / (raw_grad_norm + 1e-12))
                 decision = ClipDecision(
                     coefficient=coefficient,
                     threshold=coefficient * raw_grad_norm if coefficient < 1.0 else math.inf,
                     active=coefficient < 1.0,
                     source="agc",
                 )
-            elif clipping_cfg.get("name") == "adagc":
-                if not isinstance(policy, AdaGCPolicy):
+            elif current_clipping_cfg.get("name") == "adagc":
+                if not isinstance(current_policy, AdaGCPolicy):
                     raise TypeError("AdaGC configuration did not build an AdaGC policy")
-                coefficient = policy.apply_(parameters, raw_grad_norm)
+                minimum_coefficient = current_policy.apply_(parameters, raw_grad_norm)
+                coefficient = min(1.0, gradient_norm(parameters) / (raw_grad_norm + 1e-12))
                 decision = ClipDecision(
                     coefficient=coefficient,
                     threshold=coefficient * raw_grad_norm if coefficient < 1.0 else math.inf,
                     active=coefficient < 1.0,
                     source="adagc",
                 )
-            elif placement is ClippingPlacement.PRE_MOMENT:
+            elif current_placement is ClippingPlacement.PRE_MOMENT:
                 scale_gradients_(parameters, decision.coefficient)
 
             applied_grad_norm = gradient_norm(parameters)
             optimizer.step()
             proposed_update_norm = parameter_update_norm(parameters, before)
-            if placement is ClippingPlacement.POST_UPDATE:
+            if current_placement is ClippingPlacement.POST_UPDATE:
                 update_application = apply_post_update_decision_(
                     parameters,
                     before,
                     decision,
-                    allow_enlarge=bool(clipping_cfg.get("allow_enlarge", False)),
+                    allow_enlarge=bool(current_clipping_cfg.get("allow_enlarge", False)),
                 )
                 applied_update_norm = update_application.applied_update_norm
                 applied_coefficient = update_application.coefficient
@@ -345,6 +438,13 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
             episode = episode_tracker.update(q, global_step)
             history = history_tracker.update(episode, 1.0 - min(1.0, applied_coefficient))
             learning_rate = float(optimizer.param_groups[0]["lr"])
+            loss_value = float(loss.detach())
+            adverse_event = bool(loss_ema is not None and global_step >= 50 and loss_value > max(5.0, 2.5 * loss_ema))
+            loss_ema = loss_value if loss_ema is None else 0.95 * loss_ema + 0.05 * loss_value
+            if loss_value > float(cfg.get("failure_loss", 100.0)) or not math.isfinite(applied_update_norm):
+                failed = True
+                failure_reason = "loss_explosion" if loss_value > float(cfg.get("failure_loss", 100.0)) else "non_finite_update"
+                adverse_event = True
             row: dict[str, Any] = {
                 **decision.to_dict(),
                 "epoch": epoch,
@@ -359,8 +459,12 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
                 "active": applied_active,
                 "threshold": threshold,
                 "clipping_coordinate": q,
-                "placement": placement.value,
+                "placement": current_placement.value,
                 "gradient_alignment": alignment,
+                "gradient_sketch_alignment": sketch_alignment,
+                "adverse_event": adverse_event,
+                "failed": failed,
+                "optimizer_step_applied": True,
                 **state_metrics,
                 **episode.to_dict(),
                 **history.to_dict(),
@@ -373,32 +477,19 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
 
             global_step += 1
             if global_step in checkpoint_steps:
-                payload = build_checkpoint(
-                    model=model,
-                    optimizer=optimizer,
-                    scheduler=scheduler,
-                    policy=policy,
-                    sampler=bundle.train_sampler,
-                    episode_tracker=episode_tracker,
-                    history_tracker=history_tracker,
-                    epoch=epoch,
-                    global_step=global_step,
-                    config=cfg,
-                    metadata={
-                        "previous_gradient_sketch": previous_gradient_sketch.detach().cpu(),
-                        "previous_probe_gradient_sketch": (
-                            None
-                            if previous_probe_gradient_sketch is None
-                            else previous_probe_gradient_sketch.detach().cpu()
-                        ),
-                    },
-                )
+                payload = checkpoint(epoch, epoch_training_complete=bundle.train_sampler.cursor == len(bundle.train_sampler.permutation))
                 save_checkpoint(checkpoint_dir / f"{run_id}.step-{global_step}.pt", payload)
+            if stop_after_steps is not None and global_step >= stop_after_steps:
+                paused = True
+                break
+            if failed:
+                break
 
-        if failed:
+        if failed or paused:
             break
 
         if epoch in hessian_epochs:
+            diagnostic_rng = capture_rng_state()
             training = model.training
             model.eval()
 
@@ -446,32 +537,19 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
                 }
             )
             model.train(training)
+            restore_rng_state(diagnostic_rng)
 
         if scheduler is not None:
             scheduler.step()
 
         if checkpoint_every_epochs > 0 and (epoch + 1) % checkpoint_every_epochs == 0:
-            payload = build_checkpoint(
-                model=model,
-                optimizer=optimizer,
-                scheduler=scheduler,
-                policy=policy,
-                sampler=bundle.train_sampler,
-                episode_tracker=episode_tracker,
-                history_tracker=history_tracker,
-                epoch=epoch + 1,
-                global_step=global_step,
-                config=cfg,
-                metadata={
-                    "previous_gradient_sketch": previous_gradient_sketch.detach().cpu(),
-                    "previous_probe_gradient_sketch": (
-                        None
-                        if previous_probe_gradient_sketch is None
-                        else previous_probe_gradient_sketch.detach().cpu()
-                    ),
-                },
-            )
+            payload = checkpoint(epoch + 1)
             save_checkpoint(checkpoint_dir / f"{run_id}.epoch-{epoch + 1}.pt", payload)
+        if bool(checkpoint_cfg.get("save_latest", True)):
+            save_checkpoint(checkpoint_dir / f"{run_id}.latest.pt", checkpoint(epoch + 1))
+
+        if int(logging_cfg.get("evaluate_every_epochs", 0)) and (epoch + 1) % int(logging_cfg["evaluate_every_epochs"]) == 0:
+            evaluation_history.append({"epoch": epoch + 1, **evaluate(model, bundle.test_loader, loss_fn, device)})
 
         if verbose and rows:
             epoch_losses = [row["loss"] for row in rows if row["epoch"] == epoch]
@@ -479,12 +557,20 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
                 f"epoch {epoch + 1}/{epochs} loss={np.mean(epoch_losses):.5f} step={global_step}",
                 flush=True,
             )
+        if max_steps is not None and global_step >= max_steps:
+            break
 
-    evaluation = evaluate(model, bundle.test_loader, loss_fn, device) if not failed else {
+    final_checkpoint = None
+    if paused:
+        final_checkpoint = save_checkpoint(checkpoint_dir / f"{run_id}.latest.pt", checkpoint(epoch, epoch_training_complete=bundle.train_sampler.cursor == len(bundle.train_sampler.permutation)))
+    elif bool(checkpoint_cfg.get("save_final", True)):
+        final_checkpoint = save_checkpoint(checkpoint_dir / f"{run_id}.{'failed' if failed else 'final'}.pt", checkpoint(epoch + 1))
+
+    evaluation = evaluate(model, bundle.test_loader, loss_fn, device) if not failed and not paused else {
         "loss": math.nan,
         "accuracy": math.nan,
     }
-    active = [float(row["active"]) for row in rows]
+    active = [float(row["active"]) for row in rows if "active" in row]
     summary: dict[str, Any] = {
         "run_id": run_id,
         "config_hash": config_hash(cfg),
@@ -497,23 +583,33 @@ def train_run(config: dict, verbose: bool = False) -> dict[str, Any]:
         "clipping_threshold": clipping_cfg.get("threshold"),
         "placement": placement.value,
         "failed": failed,
+        "paused": paused,
         "failure_reason": failure_reason,
         "completed_steps": global_step,
-        "test_loss": evaluation["loss"],
-        "test_accuracy": evaluation["accuracy"],
+        "evaluation_split": str(dataset_cfg.get("evaluation_split", "test")),
+        "evaluation_loss": evaluation["loss"],
+        "evaluation_accuracy": evaluation["accuracy"],
         "final_train_loss": rows[-1]["loss"] if rows else math.nan,
         "clipping_frequency": float(np.mean(active)) if active else 0.0,
         "mean_clipping_intensity": (
-            float(np.mean([1.0 - float(row["coefficient"]) for row in rows])) if rows else 0.0
+            float(np.mean([max(0.0, 1.0 - float(row["coefficient"])) for row in rows if "coefficient" in row])) if active else 0.0
         ),
         "episode_transitions": episode_tracker.switch_count,
         "episode_count": episode_tracker.episode_id,
         "hessian_records": hessian_records,
+        "evaluation_history": evaluation_history,
+        "adverse_event_count": sum(bool(row.get("adverse_event")) for row in rows),
+        "final_checkpoint": str(final_checkpoint) if final_checkpoint is not None else None,
+        "wall_seconds_this_process": time.monotonic() - started_at,
+        "peak_cuda_memory_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0,
     }
+    summary[f"{summary['evaluation_split']}_accuracy"] = evaluation["accuracy"]
+    summary[f"{summary['evaluation_split']}_loss"] = evaluation["loss"]
     if bool(cfg.get("return_step_rows", False)):
         summary["rows"] = rows
     if recorder is not None:
         recorder.write_summary(summary)
+        recorder.close()
     return summary
 
 
@@ -528,12 +624,13 @@ def main() -> None:
         help="override a nested value, for example optimizer.lr=0.2",
     )
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--stop-after-steps", type=int, default=None, help="gracefully checkpoint a preemption/validation pause")
     args = parser.parse_args()
     config = load_config(args.config)
     for override in args.set:
         key, value = parse_override(override)
         set_dotted(config, key, value)
-    train_run(config, verbose=args.verbose)
+    train_run(config, verbose=args.verbose, stop_after_steps=args.stop_after_steps)
 
 
 if __name__ == "__main__":
