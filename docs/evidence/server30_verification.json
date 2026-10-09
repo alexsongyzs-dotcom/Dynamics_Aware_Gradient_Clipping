@@ -1,0 +1,23 @@
+{
+  "campaign": "lyx_full_20261009_r2",
+  "scientific_source": "488032c",
+  "unique_configs": 156,
+  "identity_checks_passed": 156,
+  "successful_full_epoch_runs": 154,
+  "scientific_failures": 2,
+  "infrastructure_errors": 0,
+  "evaluation_split": "validation",
+  "prediction_rows": 230573,
+  "positive_prediction_rows": 35,
+  "positive_event_runs": 4,
+  "adverse_events": 14,
+  "robust_event_runs": 27,
+  "eligible_event_runs": 63,
+  "gate_g1_passed": false,
+  "evidence_archive_sha256": "51f40f003b2ef1a716df81f5c780e9d699573ebbdbaf136a349b87549876a3aa",
+  "resumed_logs_verified": 8,
+  "resumed_log_step_range": [
+    0,
+    7039
+  ]
+}

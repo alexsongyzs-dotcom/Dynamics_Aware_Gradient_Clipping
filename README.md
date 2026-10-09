@@ -15,6 +15,12 @@ calibration/confirmation seeds, and numerical gates are documented in
 campaign with `scripts/run_research_campaign.py --execute`; the required output
 and data directories are explicit command-line arguments.
 
+The first full campaign completed all 156 screening runs (154 full-budget runs
+and two declared instability stops). G1 did not pass, so causal branches and
+controller confirmation were not run. The [result report](docs/server30_results.md)
+records the sparse predictive evidence, event-robustness shortfall, retained
+failures, and limits of this conclusion.
+
 ## Main claim under test
 
 For vanilla SGD, multiplying an update by the global clipping coefficient is
