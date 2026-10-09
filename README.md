@@ -209,3 +209,8 @@ data/        Downloaded datasets (excluded from Git)
 ## Authors and license
 
 Yuxin Li and Zisong Yuan. Released under the [MIT License](LICENSE).
+
+
+## Paper manuscript
+
+The current manuscript is available as [PDF](paper/main.pdf) and [LaTeX source](paper/main.tex). See [compilation instructions](paper/README.md).
