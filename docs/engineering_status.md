@@ -21,13 +21,25 @@ continuation, dataset split separation, interrupted-log reconciliation, and
 retaining a negative G2 report when all reference runs fail, and deterministic
 adaptive pooling with output/gradient agreement against PyTorch.
 
-The first server G0 attempt passed the previous 31-test CUDA suite but exposed
+The first server G0 attempt passed the previous 31-test suite with CUDA replay enabled but exposed
 an unsupported deterministic CUDA backward in the real SmallCNN's adaptive
 pooling. Its logs are retained. The explicit pooling-window implementation
 fixes that operation without disabling deterministic algorithms; the revised
-source requires a fresh G0 run before any scientific screening.
+source (`488032c`) passed the 35-test server suite, including strict CUDA replay
+and backward tests, and all six real-model G0 checks.
+The largest relative norm error was `1.17343e-7` against the `2e-6` tolerance.
+P1's 156 full-data, 20-epoch screening runs started on eight GPUs at
+2026-10-09 11:22:43 UTC. Their scientific results remain pending.
 
 The full server campaign is specified in `docs/server30_protocol.md` and
 `configs/campaigns/lyx_full.yaml`. CPU tests do not establish GPU reproducibility
 or scientific efficacy. GPU checks and each scientific gate have separate
 persisted reports; a stage is complete only when its actual report exists.
+
+The current server output is
+`/mnt/data/users/yuxin/workspace/DAGC-develop-lyx/experiments/lyx_full_20261009_r2`.
+Its `status.json` is the live progress record. Completed G0 evidence was also
+retrieved to `results/server30/` in the local checkout; the frozen scientific
+source digest matches the local source. Data are cached at
+`/tmp/dagc-yuxin-runtime/data`; original archives and checksums remain in the
+persistent task directory. No G1/G2/G3 result is asserted by these G0 checks.
