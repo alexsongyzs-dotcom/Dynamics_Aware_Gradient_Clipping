@@ -1,0 +1,30 @@
+\begin{tabular}{llrrrr}
+\toprule
+Condition / initial LR & Policy & Failed & $f$ & $I$ & $b$ \\
+\midrule
+FashionMNIST / 0.8 & No clipping & 8/12 & 0.000 & 0.000 & 0.000 \\
+FashionMNIST / 0.8 & Tuned fixed & 0/12 & 1.000 & 0.947 & 0.000 \\
+FashionMNIST / 0.8 & Tuned AGC & 0/12 & 1.000 & 0.941 & 0.000 \\
+FashionMNIST / 0.8 & Tuned AutoClip & 0/12 & 0.954 & 0.297 & 0.000 \\
+FashionMNIST / 0.8 & Tuned median scale & 0/12 & 1.000 & 0.896 & 0.000 \\
+FashionMNIST / 0.8 & DAGC-V2 & 0/12 & 1.000 & 0.893 & 0.972 \\
+FashionMNIST / 0.8 & No alignment & 0/12 & 1.000 & 0.893 & 0.970 \\
+FashionMNIST / 0.8 & Trace replay & 0/12 & 1.000 & 0.894 & 0.000 \\
+CIFAR-10 / 0.1 & No clipping & 0/12 & 0.000 & 0.000 & 0.000 \\
+CIFAR-10 / 0.1 & Tuned fixed & 0/12 & 0.000 & 0.000 & 0.000 \\
+CIFAR-10 / 0.1 & Tuned AGC & 0/12 & 0.763 & 0.008 & 0.000 \\
+CIFAR-10 / 0.1 & Tuned AutoClip & 0/12 & 0.960 & 0.262 & 0.000 \\
+CIFAR-10 / 0.1 & Tuned median scale & 0/12 & 1.000 & 0.598 & 0.000 \\
+CIFAR-10 / 0.1 & DAGC-V2 & 0/12 & 1.000 & 0.900 & 0.991 \\
+CIFAR-10 / 0.1 & No alignment & 0/12 & 1.000 & 0.900 & 0.991 \\
+CIFAR-10 / 0.1 & Trace replay & 0/12 & 1.000 & 0.900 & 0.000 \\
+CIFAR-10 / 0.4 & No clipping & 0/12 & 0.000 & 0.000 & 0.000 \\
+CIFAR-10 / 0.4 & Tuned fixed & 0/12 & 1.000 & 0.585 & 0.000 \\
+CIFAR-10 / 0.4 & Tuned AGC & 0/12 & 1.000 & 0.232 & 0.000 \\
+CIFAR-10 / 0.4 & Tuned AutoClip & 0/12 & 0.987 & 0.355 & 0.000 \\
+CIFAR-10 / 0.4 & Tuned median scale & 0/12 & 0.999 & 0.599 & 0.000 \\
+CIFAR-10 / 0.4 & DAGC-V2 & 0/12 & 1.000 & 0.899 & 0.990 \\
+CIFAR-10 / 0.4 & No alignment & 0/12 & 1.000 & 0.899 & 0.990 \\
+CIFAR-10 / 0.4 & Trace replay & 0/12 & 1.000 & 0.900 & 0.000 \\
+\bottomrule
+\end{tabular}

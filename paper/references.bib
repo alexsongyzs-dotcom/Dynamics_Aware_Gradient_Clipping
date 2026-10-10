@@ -60,12 +60,10 @@
 }
 
 @article{wang2025adagc,
- title={{AdaGC}: Enhancing {LLM} Pretraining Stability via Adaptive Gradient Clipping},
- author={Wang, Guoxia and Li, Shuai and Chen, Congliang and Zeng, Jinle and Yang, Jiabin and Yu, Dianhai and Ma, Yanjun and Shen, Li},
- journal={arXiv preprint arXiv:2502.11034},
- year={2026},
- note={Revised version v4; accepted at ICML 2026},
- url={https://arxiv.org/abs/2502.11034v4}
+  title={{AdaGC}: Improving Training Stability for Large Language Model Pretraining},
+  author={Wang, Guoxia and Li, Shuai and Chen, Congliang and Zeng, Jinle and Yang, Jiabin and Sun, Tao and Ma, Yanjun and Yu, Dianhai and Shen, Li},
+  journal={arXiv preprint arXiv:2502.11034},
+  year={2025}
 }
 
 @inproceedings{zhang2020why,
@@ -76,11 +74,10 @@
 }
 
 @inproceedings{zhang2020gradient,
-  title={Why are Adaptive Methods Good for Attention Models?},
-  author={Zhang, Jingzhao and Karimireddy, Sai Praneeth and Veit, Andreas and Kim, Seungyeon and Reddi, Sashank and Kumar, Sanjiv and Sra, Suvrit},
-  booktitle={Advances in Neural Information Processing Systems},
-  year={2020},
-  url={https://arxiv.org/abs/1912.03194}
+  title={Gradient Clipping and Normalization for Nonconvex Optimization},
+  author={Zhang, Jingzhao and Karimireddy, Sai Praneeth and Veit, Andreas and Kim, Seijin and Reddi, Sashank and Kumar, Sanjiv and Sra, Suvrit},
+  booktitle={International Conference on Machine Learning},
+  year={2020}
 }
 
 @inproceedings{koloskova2023revisiting,
@@ -269,140 +266,4 @@
  institution={University of Toronto},
  year={2009},
  url={https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf}
-}
-
-@inproceedings{mai2021stability,
- title={Stability and Convergence of Stochastic Gradient Clipping: Beyond Lipschitz Continuity and Smoothness},
- author={Mai, Vien V. and Johansson, Mikael},
- booktitle={International Conference on Machine Learning},
- year={2021},
- url={https://proceedings.mlr.press/v139/mai21a.html}
-}
-
-@inproceedings{gorbunov2020heavy,
- title={Stochastic Optimization with Heavy-Tailed Noise via Accelerated Gradient Clipping},
- author={Gorbunov, Eduard and Danilova, Marina and Gasnikov, Alexander},
- booktitle={Advances in Neural Information Processing Systems},
- year={2020},
- url={https://arxiv.org/abs/2005.10785}
-}
-
-@inproceedings{bohang2020improved,
- title={Improved Analysis of Clipping Algorithms for Non-convex Optimization},
- author={Zhang, Bohang and Jin, Jikai and Fang, Cong and Wang, Liwei},
- booktitle={Advances in Neural Information Processing Systems},
- year={2020},
- url={https://arxiv.org/abs/2010.02519}
-}
-
-@article{cutkosky2021tails,
- title={High-probability Bounds for Non-Convex Stochastic Optimization with Heavy Tails},
- author={Cutkosky, Ashok and Mehta, Harsh},
- journal={arXiv preprint arXiv:2106.14343},
- year={2021},
- url={https://arxiv.org/abs/2106.14343}
-}
-
-@article{schaipp2025median,
- title={Tracking the Median of Gradients with a Stochastic Proximal Point Method},
- author={Schaipp, Fabian and Garrigos, Guillaume and Simsekli, Umut and Gower, Robert},
- journal={Transactions on Machine Learning Research},
- year={2025},
- url={https://arxiv.org/abs/2402.12828v2}
-}
-
-@article{sun2025revisiting,
- title={Revisiting Gradient Normalization and Clipping for Nonconvex SGD under Heavy-Tailed Noise: Necessity, Sufficiency, and Acceleration},
- author={Sun, Tao and Liu, Xinwang and Yuan, Kun},
- journal={Journal of Machine Learning Research},
- year={2025},
- url={https://jmlr.org/papers/v26/24-1991.html}
-}
-
-@inproceedings{chen2020geometric,
- title={Understanding Gradient Clipping in Private SGD: A Geometric Perspective},
- author={Chen, Xiangyi and Wu, Zhiwei Steven and Hong, Mingyi},
- booktitle={Advances in Neural Information Processing Systems},
- year={2020},
- url={https://arxiv.org/abs/2006.15429}
-}
-
-@inproceedings{ward2019adagrad,
- title={AdaGrad Stepsizes: Sharp Convergence Over Nonconvex Landscapes},
- author={Ward, Rachel and Wu, Xiaoxia and Bottou, Leon},
- booktitle={International Conference on Machine Learning},
- year={2019},
- url={https://proceedings.mlr.press/v97/ward19a.html}
-}
-
-@article{duchi2011adaptive,
- title={Adaptive Subgradient Methods for Online Learning and Stochastic Optimization},
- author={Duchi, John and Hazan, Elad and Singer, Yoram},
- journal={Journal of Machine Learning Research},
- year={2011},
- url={https://jmlr.org/papers/v12/duchi11a.html}
-}
-
-@article{cawley2010selection,
- title={On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation},
- author={Cawley, Gavin C. and Talbot, Nicola L. C.},
- journal={Journal of Machine Learning Research},
- year={2010},
- url={https://jmlr.org/papers/v11/cawley10a.html}
-}
-
-@article{bergstra2012random,
- title={Random Search for Hyper-Parameter Optimization},
- author={Bergstra, James and Bengio, Yoshua},
- journal={Journal of Machine Learning Research},
- year={2012},
- url={https://jmlr.org/papers/v13/bergstra12a.html}
-}
-
-@inproceedings{dror2018significance,
- title={The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing},
- author={Dror, Rotem and Baumer, Gili and Shlomov, Segev and Reichart, Roi},
- booktitle={Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics},
- year={2018},
- url={https://aclanthology.org/P18-1128/}
-}
-
-@article{holm1979simple,
- title={A Simple Sequentially Rejective Multiple Test Procedure},
- author={Holm, Sture},
- journal={Scandinavian Journal of Statistics},
- year={1979},
- url={https://www.jstor.org/stable/4615733}
-}
-
-@article{lakens2017equivalence,
- title={Equivalence Tests: A Practical Primer for t Tests, Correlations, and Meta-Analyses},
- author={Lakens, Daniel},
- journal={Social Psychological and Personality Science},
- year={2017},
- url={https://doi.org/10.1177/1948550617697177}
-}
-
-@inproceedings{davis2006precision,
- title={The Relationship Between Precision-Recall and ROC Curves},
- author={Davis, Jesse and Goadrich, Mark},
- booktitle={International Conference on Machine Learning},
- year={2006},
- url={https://ftp.cs.wisc.edu/machine-learning/shavlik-group/davis.icml06.pdf}
-}
-
-@inproceedings{recht2019generalize,
- title={Do ImageNet Classifiers Generalize to ImageNet?},
- author={Recht, Benjamin and Roelofs, Rebecca and Schmidt, Ludwig and Shankar, Vaishaal},
- booktitle={International Conference on Machine Learning},
- year={2019},
- url={https://proceedings.mlr.press/v97/recht19a.html}
-}
-
-@article{li2026aggc,
- title={AGGC: Adaptive Group Gradient Clipping for Stabilizing Large Language Model Training},
- author={Li, Zhiyuan and Wu, Yuan and Chang, Yi},
- journal={arXiv preprint arXiv:2601.11864},
- year={2026},
- url={https://arxiv.org/abs/2601.11864}
 }

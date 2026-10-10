@@ -1,0 +1,17 @@
+{
+  "python": "3.12.3",
+  "packages": {
+    "torch": "2.8.0+cu128",
+    "torchvision": "0.23.0+cu128",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.6",
+    "pytest": "9.1.1"
+  },
+  "cuda": "12.8",
+  "cudnn": 91002,
+  "gpu": "NVIDIA RTX PRO 5000 72GB Blackwell",
+  "source_commit": "233bb79",
+  "protocol_amendment_commit": "57f5565",
+  "training_source_sha256": "2eeccff6839ee177260f38250d8eac67a4e1587e2c3507793a9dd8f11b7d8ad6"
+}

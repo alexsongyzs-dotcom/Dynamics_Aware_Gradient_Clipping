@@ -11,6 +11,8 @@ This guide maps the published artifacts to their research roles. It does not mov
 
 ## Evidence map
 
+The principal completed confirmation artifacts are in [results/lyx1](../../results/lyx1/). The map below additionally preserves the historical experiments.
+
 | Research stage | Artifact directory | Role / limitation | Published files in inventory |
 |---|---|---|---:|
 | Original exploration / V1 | [a1_high_lr_pilot](../../results/a1_high_lr_pilot/) | High-learning-rate development screening; not confirmatory V2 evidence. | 2 |
@@ -38,13 +40,13 @@ The mechanism and learning-rate perturbation experiments do not establish an inc
 
 The separate [156-run screening archive](../../paper/evidence/) failed its G1 gate. Its [results](../../paper/evidence/server30_results.md) and [verification](../../paper/evidence/server30_verification.json) are screening evidence, not completed V2 confirmation results. Downstream gated stages were not executed.
 
-The confirmation implementation is on `develop/lyx1`, not in the main-branch training engine. At the latest inspected committed snapshot, confirmation was still in progress; no completed audited confirmation export is included here. See the [continuation instructions](../next_experiments_20261010.md). Do not substitute main-branch scripts for that protocol.
+The completed confirmation study from `develop/lyx1` is integrated into `develop/yzs`: 117 calibration outcomes and 288 confirmation outcomes, with 397 full-budget completions and eight predefined failures. See the [complete evidence](../../results/lyx1/README.md), [frozen protocol](../lyx1_protocol.md), and [primary comparisons](../../results/lyx1/primary_comparisons.csv). DAGC loses to validation-tuned fixed clipping in all three conditions after Holm correction; replay satisfies the prespecified per-comparison equivalence criterion. These results supersede the earlier pending-confirmation status. The separate 156-run G1 screening remains a different campaign.
 
 ## Reproduction and file handling
 
-Run the main-branch scripts from the repository root. Installation and commands are in the [repository README](../../README.md); the [mechanism protocol](../mechanism_experiments.md) describes the controls. Keep a fresh output directory for every changed protocol to prevent cached outcomes from being reused.
+Run the scripts from the repository root. Installation and commands are in the [repository README](../../README.md); the [mechanism protocol](../mechanism_experiments.md) describes the controls. Keep a fresh output directory for every changed protocol to prevent cached outcomes from being reused.
 
-Downloaded data, checkpoints, Python/test caches, and unpublished local smoke outputs are excluded from this inventory. No training data or experimental results were relocated during organization. The local inventory originally covered 181 result files; this public inventory includes only already tracked result files with verified matching hashes. It is an organization inventory, not a claim that every listed artifact received a scientific audit.
+Downloaded data, checkpoints, Python/test caches, and unpublished local smoke outputs are excluded from this inventory. No training data or experimental results were relocated during organization. The local inventory originally covered 181 result files; this public inventory includes tracked historical and newly integrated confirmation files, with hashes computed from the published bytes. It is an organization inventory, not a claim that every listed artifact received a scientific audit.
 
 ## Figures and manuscript source
 

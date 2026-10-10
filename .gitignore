@@ -13,6 +13,11 @@ data/
 results/raw/
 results/aggregated/
 results/checkpoints/
+results/server30/
+results/lyx1/raw/
+results/lyx1/checkpoints/
+results/lyx1/logs/
+tmp/
 *.pt
 *.pth
 *.ckpt

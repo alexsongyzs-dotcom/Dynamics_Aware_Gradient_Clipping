@@ -1,0 +1,45 @@
+{
+  "validated_results": 47,
+  "source_sha256": "2eeccff6839ee177260f38250d8eac67a4e1587e2c3507793a9dd8f11b7d8ad6",
+  "amendment": {
+    "amended_unix": 1791567918.3267388,
+    "reason": "Minimum two-sided exact p with n=8 is 2/256; Holm across 9 comparisons cannot reject at .05. Increase confirmation n to 12 before any confirmation runs.",
+    "old_confirmation_seeds": [
+      3100,
+      3101,
+      3102,
+      3103,
+      3104,
+      3105,
+      3106,
+      3107
+    ],
+    "new_confirmation_seeds": [
+      3100,
+      3101,
+      3102,
+      3103,
+      3104,
+      3105,
+      3106,
+      3107,
+      3108,
+      3109,
+      3110,
+      3111
+    ],
+    "phase": "calibration",
+    "confirmation_results": 0,
+    "parent_pid": 106033,
+    "running_calibration_pids": [
+      106502,
+      106552,
+      106561,
+      106564,
+      106566,
+      106568,
+      106571,
+      106575
+    ]
+  }
+}
