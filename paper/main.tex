@@ -24,11 +24,6 @@
 \icmlcorrespondingauthor{Anonymous Author(s)}{anonymous@example.com}
 \vskip 0.3in
 
-]
-\printAffiliationsAndNotice{}
-\hypersetup{pdftitle={Dynamics-Aware Gradient Clipping: Separating Feedback from Threshold Scheduling},
-pdfsubject={Research manuscript draft; conference template provisional}}
-
 \begin{abstract}
 Adaptive gradient clipping can improve training without establishing that its
 feedback signals are useful. We examine Dynamics-Aware Gradient Clipping
@@ -45,6 +40,12 @@ These controls separate threshold scheduling from evidence for an online
 feedback mechanism; the analysis does not claim convergence of the coupled
 training dynamics.
 \end{abstract}
+]
+\printAffiliationsAndNotice{}
+\hypersetup{pdftitle={Dynamics-Aware Gradient Clipping: Separating Feedback from Threshold Scheduling},
+pdfsubject={Research manuscript draft; conference template provisional}}
+
+
 
 \section{Introduction}
 Gradient clipping limits the contribution of a large gradient to an optimizer
@@ -292,23 +293,6 @@ Win counts exclude ties.}
 \label{tab:paired}
 \input{generated/paired}
 \end{table*}
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/lyx1_paired.pdf}
-\caption{Paired effects of DAGC versus the main controls and the no-alignment
-variant. Bars show 95\% intervals; the shaded region is the prespecified
-$\pm0.5$ point margin. Equivalence requires a separate 90\% interval check.}
-\label{fig:paired}
-\end{figure*}
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/lyx1_traces.pdf}
-\caption{Applied thresholds and clipping intensities averaged over twelve
-confirmation seeds and 100 bins of training progress. DAGC and no-alignment curves overlap on CIFAR-10. These observational
-trajectories describe behavior; they do not establish the causal value of
-an individual feedback signal.}
-\label{fig:traces}
-\end{figure*}
 
 
 
@@ -378,6 +362,25 @@ calibration results carried forward from the first execution.
 
 \section{Results}
 \input{generated/findings}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/lyx1_paired.pdf}
+\caption{Paired effects of DAGC versus the main controls and the no-alignment
+variant. Bars show 95\% intervals; the shaded region is the prespecified
+$\pm0.5$ point margin. Equivalence requires a separate 90\% interval check.}
+\label{fig:paired}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/lyx1_traces.pdf}
+\caption{Applied thresholds and clipping intensities averaged over twelve
+confirmation seeds and 100 bins of training progress. DAGC and no-alignment curves overlap on CIFAR-10. These observational
+trajectories describe behavior; they do not establish the causal value of
+an individual feedback signal.}
+\label{fig:traces}
+\end{figure*}
 
 \subsection{Earlier exploratory evidence and corrected interpretation}
 The earlier 15-epoch, 5,000-training/2,000-test experiments used different
@@ -458,6 +461,7 @@ applications; broader deployment consequences depend on the model and use.
 \clearpage
 \onecolumn
 \appendix
+\setlength{\intextsep}{8pt}
 
 \section{Reproducibility and Complete Calibration}
 The complete code, compact evidence, and manuscript are available at
