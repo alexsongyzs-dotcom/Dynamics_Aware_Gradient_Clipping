@@ -1,0 +1,15 @@
+path,rows,duplicates,invalid_accuracy,reported_divergences,sha256,failure_record
+results\a1_high_lr_pilot\raw_runs.csv,45,0,0,,3668c6133a77b225920141cf89a9826d7399e6f6a971a36c1980804aef7c6f88,missing; cannot independently certify no failures
+results\a3_ablation_small\raw_runs.csv,25,0,0,,6348cda02a74135afd77dcb42876a6e7e40bbe37197ad07add25c4d71a0803f9,missing; cannot independently certify no failures
+results\a4_multiseed_small\raw_runs.csv,160,0,0,,566b6ab9b24f51c08bc5fb1212731c738cacc237095924ee5d3df2172aebd4fe,missing; cannot independently certify no failures
+results\dagc_v2_development\raw_runs.csv,39,0,0,0.0,7347014746c79c7ec635b7d341eb698e92e8f4ff693d68a83531b6fc4b3e4e23,present
+results\dagc_v2_evaluation\raw_runs.csv,40,0,0,8.0,a86d4532006fa60d3b09f795034aecc5cdc4febddc8010d405c3199358b1d14d,present
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,40,0,0,7.0,e2245bcc15681b9d06bbb08955b1fccdd370038c148cce16b876f6c2841c3b64,present
+results\mlp_calibration_lr0.8\raw_runs.csv,21,0,0,3.0,8ee3d2e5e952b5bc6c55adab4d016fc6e4e8e1ee5b57dd357b807ee82cd38909,present
+results\mlp_evaluation_lr0.8\raw_runs.csv,40,0,0,8.0,571259121f4d3d1d43f4bca2b860e740d632284e78dc7427cf3c35e30e558e3b,present
+results\mnist_calibration_lr0.8\raw_runs.csv,21,0,0,2.0,e8f13caf74aa686aa789eb75dc6c54e94424ad0b4d2da503d3e8c3a4fbc0e852,present
+results\mnist_evaluation_lr0.8\raw_runs.csv,40,0,0,6.0,b232c1ecf60ea7dbd7a6f2ee1e7655a3d7e634bd024d029778ef404bff9734c9,present
+results\v2_lr_perturbation\raw_runs.csv,48,0,0,0.0,0b5dbeeefdd09cdef4cf4b978083085cf73b91de643e3ff0a6f3b070b3169fa3,present
+results\v2_mechanism\raw_runs.csv,64,0,0,1.0,fb912bd07939903ac9cb5e4c2a75d73e0d47467661d89f2118dd13a169e12068,present
+results\unstable_band\eval_raw.csv,96,0,0,32.0,94fc7622fbc2f5e04541c8e25bbc62f33c533dd5de36091f9e0cb75477e5b207,present
+results\unstable_band\calibration_raw.csv,54,0,0,9.0,1e383c671dc4a254bcd653af177429b7225ecf97addbeaa08a91f60f79d516f6,present

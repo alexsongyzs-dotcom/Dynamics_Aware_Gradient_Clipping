@@ -1,0 +1,52 @@
+{
+  "gate": "G1",
+  "passed": false,
+  "prediction": {
+    "config_group": {
+      "family_means": {
+        "fashion_cnn_sgd": -0.03192472200517725
+      },
+      "lower": -0.06196631475709698,
+      "mean": -0.03192472200517725,
+      "n_informative_runs": 2,
+      "passes_increment": false,
+      "upper": -0.0018831292532575164,
+      "valid": true
+    },
+    "family": {
+      "reason": "no_runs_with_both_target_classes",
+      "valid": false
+    },
+    "seed": {
+      "family_means": {
+        "fashion_cnn_sgd": -3.676662174391561e-05
+      },
+      "lower": -0.002269455516675317,
+      "mean": -3.676662174391561e-05,
+      "n_informative_runs": 2,
+      "passes_increment": false,
+      "upper": 0.002195922273187486,
+      "valid": true
+    }
+  },
+  "reason": "predictive_or_event_robustness_gate_not_met",
+  "robust_event_run_fraction": 0.42857142857142855,
+  "scope": "exploratory screening; bootstrap units are runs, not steps",
+  "selected_cells": [
+    {
+      "family": "cifar_resnet_adamw",
+      "learning_rate": 0.003,
+      "threshold": 1.0
+    },
+    {
+      "family": "cifar_resnet_sgd",
+      "learning_rate": 0.2,
+      "threshold": 1.0
+    },
+    {
+      "family": "fashion_cnn_sgd",
+      "learning_rate": 0.8,
+      "threshold": 0.3
+    }
+  ]
+}

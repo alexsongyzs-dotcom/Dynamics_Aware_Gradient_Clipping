@@ -1,0 +1,144 @@
+path,group,n,seeds,mean,ci95_t,mean_failed_zero
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'dagc', 'lr': np.float64(0.05)}",3,"0,1,2",84.71666666666667,1.3681563696469297,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'dagc', 'lr': np.float64(0.1)}",3,"0,1,2",86.3,0.75552098964743,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'dagc', 'lr': np.float64(0.2)}",3,"0,1,2",86.06666666666666,1.3737828075181515,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'dagc', 'lr': np.float64(0.4)}",3,"0,1,2",83.9,2.183357799796719,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'dagc', 'lr': np.float64(0.8)}",3,"0,1,2",74.38333333333334,10.498482457022163,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'fixed', 'lr': np.float64(0.05)}",3,"0,1,2",83.88333333333333,1.7580138041369129,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'fixed', 'lr': np.float64(0.1)}",3,"0,1,2",86.35000000000001,0.645397909454405,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'fixed', 'lr': np.float64(0.2)}",3,"0,1,2",86.36666666666667,1.3046650900168972,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'fixed', 'lr': np.float64(0.4)}",3,"0,1,2",83.55,2.584577863960999,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'fixed', 'lr': np.float64(0.8)}",3,"0,1,2",63.83333333333333,32.11422610764513,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'none', 'lr': np.float64(0.05)}",3,"0,1,2",86.25000000000001,1.7913371789837265,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'none', 'lr': np.float64(0.1)}",3,"0,1,2",85.95,2.608344597305528,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'none', 'lr': np.float64(0.2)}",3,"0,1,2",81.28333333333333,12.786272909832755,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'none', 'lr': np.float64(0.4)}",3,"0,1,2",9.900000000000002,1.8296816779571436,
+results\a1_high_lr_pilot\raw_runs.csv,"{'policy': 'none', 'lr': np.float64(0.8)}",3,"0,1,2",9.900000000000002,1.8296816779571436,
+results\a3_ablation_small\raw_runs.csv,"{'suite': 'a3', 'condition': 'fixed_global', 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'fixed'}",5,"0,1,2,3,4",78.58000000000001,2.018229248098008,
+results\a3_ablation_small\raw_runs.csv,"{'suite': 'a3', 'condition': 'fixed_threshold', 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",77.67,2.316127747144547,
+results\a3_ablation_small\raw_runs.csv,"{'suite': 'a3', 'condition': 'full_dagc', 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",79.38000000000001,1.6971552991097734,
+results\a3_ablation_small\raw_runs.csv,"{'suite': 'a3', 'condition': 'no_alignment_feedback', 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",78.9,0.8189336516039556,
+results\a3_ablation_small\raw_runs.csv,"{'suite': 'a3', 'condition': 'no_exposure_feedback', 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",77.63,2.302357791452038,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'agc'}",5,"0,1,2,3,4",81.46,0.9170678457777726,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'dagc'}",5,"0,1,2,3,4",81.39,0.4196934519345471,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'fixed'}",5,"0,1,2,3,4",81.03,0.6893751617060183,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'none'}",5,"0,1,2,3,4",81.47,0.7483536832415133,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'agc'}",5,"0,1,2,3,4",76.17999999999999,1.153645516369232,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",80.49,2.0052008616114834,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'fixed'}",5,"0,1,2,3,4",79.25,2.3920166281008077,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'none'}",5,"0,1,2,3,4",81.27000000000001,1.5198342672986644,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'agc'}",5,"0,1,2,3,4",83.61000000000001,0.6792367394489822,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'dagc'}",5,"0,1,2,3,4",81.60000000000001,1.3594661523799962,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'fixed'}",5,"0,1,2,3,4",81.12,1.491031158814527,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'none'}",5,"0,1,2,3,4",81.67999999999999,1.5013355741620487,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'agc'}",5,"0,1,2,3,4",73.81,1.4707299094880713,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",79.9,1.1464398743419342,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'fixed'}",5,"0,1,2,3,4",78.63999999999999,1.9471769910816181,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'none'}",5,"0,1,2,3,4",82.27,2.3809534464724136,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'agc'}",5,"0,1,2,3,4",91.83,0.39897815637946465,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'dagc'}",5,"0,1,2,3,4",92.06,0.6260868321708237,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'fixed'}",5,"0,1,2,3,4",91.96,0.6561462935417565,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'adamw', 'policy': 'none'}",5,"0,1,2,3,4",92.6,0.5638986665747674,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'agc'}",5,"0,1,2,3,4",88.46000000000001,0.48765948465517794,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",92.17999999999999,0.7798796584151637,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'fixed'}",5,"0,1,2,3,4",91.62000000000002,1.0686608983187738,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'mlp', 'optimizer': 'sgd', 'policy': 'none'}",5,"0,1,2,3,4",92.82000000000001,0.7921388136969371,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'agc'}",5,"0,1,2,3,4",96.83,0.4511189332598084,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'dagc'}",5,"0,1,2,3,4",96.41,0.4993743526728457,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'fixed'}",5,"0,1,2,3,4",96.35000000000001,0.5638986665747611,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'adamw', 'policy': 'none'}",5,"0,1,2,3,4",96.2,0.5358610981178683,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'agc'}",5,"0,1,2,3,4",90.07000000000002,0.5800710818322309,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'dagc'}",5,"0,1,2,3,4",94.86000000000001,0.9409240970646928,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'fixed'}",5,"0,1,2,3,4",94.52999999999999,1.1661069441830694,
+results\a4_multiseed_small\raw_runs.csv,"{'suite': 'a4', 'condition': np.float64(nan), 'dataset': 'mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'policy': 'none'}",5,"0,1,2,3,4",96.38,0.20869561072360202,
+results\dagc_v2_development\raw_runs.csv,{'label': 'agc@default'},3,"200,201,202",84.58333333333333,5.445779096766134,84.58333333333333
+results\dagc_v2_development\raw_runs.csv,{'label': 'dagc_v1'},3,"200,201,202",81.51666666666667,6.289743154127074,81.51666666666667
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.1,gamma=0.05'}",3,"200,201,202",86.83333333333333,3.5006368976451796,86.83333333333333
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.1,gamma=0.1'}",3,"200,201,202",86.51666666666667,3.7268965419519735,86.51666666666667
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.2,gamma=0.05'}",3,"200,201,202",86.20000000000002,2.6898749692593555,86.20000000000002
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.2,gamma=0.1'}",3,"200,201,202",86.46666666666665,5.544044056522521,86.46666666666665
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.35,gamma=0.05'}",3,"200,201,202",86.08333333333333,2.5855725062390906,86.08333333333333
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.35,gamma=0.1'}",3,"200,201,202",86.53333333333335,2.7559751196646403,86.53333333333335
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.5,gamma=0.05'}",3,"200,201,202",85.86666666666666,3.3909465519576587,85.86666666666666
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.5,gamma=0.1'}",3,"200,201,202",86.11666666666666,2.865744733448768,86.11666666666666
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.7,gamma=0.05'}",3,"200,201,202",85.85,3.9978412977929647,85.85
+results\dagc_v2_development\raw_runs.csv,"{'label': 'dagc_v2@target=0.7,gamma=0.1'}",3,"200,201,202",86.61666666666669,2.0833213674611897,86.61666666666669
+results\dagc_v2_development\raw_runs.csv,{'label': 'fixed@0.25'},3,"200,201,202",84.13333333333334,2.311494256508814,84.13333333333334
+results\dagc_v2_evaluation\raw_runs.csv,{'policy': 'agc_default'},8,"300,301,302,303,304,305,306,307",84.94999999999999,0.7573787963531973,84.94999999999999
+results\dagc_v2_evaluation\raw_runs.csv,{'policy': 'dagc_v1'},8,"300,301,302,303,304,305,306,307",78.35,5.629567201736733,78.35
+results\dagc_v2_evaluation\raw_runs.csv,{'policy': 'dagc_v2'},8,"300,301,302,303,304,305,306,307",86.55625,0.7310276193752079,86.55625
+results\dagc_v2_evaluation\raw_runs.csv,{'policy': 'fixed_tuned'},8,"300,301,302,303,304,305,306,307",84.375,1.4412920328689682,84.375
+results\dagc_v2_evaluation\raw_runs.csv,{'policy': 'none'},8,"300,301,302,303,304,305,306,307",10.4,1.3906983399803248,0.0
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,{'policy': 'agc_default'},8,"308,309,310,311,312,313,314,315",87.01875000000001,0.8449123455041132,87.01875000000001
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,{'policy': 'dagc_v1'},8,"308,309,310,311,312,313,314,315",83.18125,0.9762228815736733,83.18125
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,{'policy': 'dagc_v2'},8,"308,309,310,311,312,313,314,315",87.58124999999998,0.761303011863808,87.58124999999998
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,{'policy': 'fixed_tuned'},8,"308,309,310,311,312,313,314,315",86.75625,0.48100402930727143,86.75625
+results\dagc_v2_evaluation_lr0.4\raw_runs.csv,{'policy': 'none'},8,"308,309,310,311,312,313,314,315",10.01875,1.2034341022562358,1.2125000000000001
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'agc_default'},3,"400,401,402",81.13333333333334,1.713574927240208,81.13333333333334
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'dagc_v2_frozen'},3,"400,401,402",83.88333333333333,1.766767453964985,83.88333333333333
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.10'},3,"400,401,402",83.41666666666666,2.130911419010875,83.41666666666666
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.25'},3,"400,401,402",81.38333333333333,3.1723453356350424,81.38333333333333
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.50'},3,"400,401,402",77.3,3.9258022207621655,77.3
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@1.00'},3,"400,401,402",54.85,16.782184285566913,54.85
+results\mlp_calibration_lr0.8\raw_runs.csv,{'policy': 'none'},3,"400,401,402",10.133333333333333,1.37378280751814,0.0
+results\mlp_evaluation_lr0.8\raw_runs.csv,{'policy': 'agc_default'},8,"500,501,502,503,504,505,506,507",82.28750000000001,1.3544626303733798,82.28750000000001
+results\mlp_evaluation_lr0.8\raw_runs.csv,{'policy': 'dagc_v1'},8,"500,501,502,503,504,505,506,507",77.50625,2.3952960778192716,77.50625
+results\mlp_evaluation_lr0.8\raw_runs.csv,{'policy': 'dagc_v2'},8,"500,501,502,503,504,505,506,507",84.125,0.6272147122370431,84.125
+results\mlp_evaluation_lr0.8\raw_runs.csv,{'policy': 'fixed_tuned'},8,"500,501,502,503,504,505,506,507",82.59375,1.0053222968151674,82.59375
+results\mlp_evaluation_lr0.8\raw_runs.csv,{'policy': 'none'},8,"500,501,502,503,504,505,506,507",13.6875,2.2712298584825352,0.0
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'agc_default'},3,"600,601,602",96.48333333333333,2.311494256508831,96.48333333333333
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'dagc_v2_frozen'},3,"600,601,602",97.96666666666667,1.1270249265893344,97.96666666666667
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.10'},3,"600,601,602",97.41666666666666,1.933535945739992,97.41666666666666
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.25'},3,"600,601,602",95.83333333333334,4.2708629871278445,95.83333333333334
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@0.50'},3,"600,601,602",93.18333333333334,2.4664789718073292,93.18333333333334
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'fixed@1.00'},3,"600,601,602",87.23333333333333,10.096983414443496,87.23333333333333
+results\mnist_calibration_lr0.8\raw_runs.csv,{'policy': 'none'},3,"600,601,602",9.566666666666668,2.1810012337567564,3.4666666666666663
+results\mnist_evaluation_lr0.8\raw_runs.csv,{'policy': 'agc_default'},8,"700,701,702,703,704,705,706,707",96.8375,0.43196019517280604,96.8375
+results\mnist_evaluation_lr0.8\raw_runs.csv,{'policy': 'dagc_v1'},8,"700,701,702,703,704,705,706,707",85.19375,8.935971426315772,85.19375
+results\mnist_evaluation_lr0.8\raw_runs.csv,{'policy': 'dagc_v2'},8,"700,701,702,703,704,705,706,707",98.3875,0.17557861100944858,98.3875
+results\mnist_evaluation_lr0.8\raw_runs.csv,{'policy': 'fixed_tuned'},8,"700,701,702,703,704,705,706,707",97.22500000000001,0.5225727883867458,97.22500000000001
+results\mnist_evaluation_lr0.8\raw_runs.csv,{'policy': 'none'},8,"700,701,702,703,704,705,706,707",10.50625,0.5102162172025799,2.54375
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'drop', 'policy': 'no_alignment'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.6625,0.5262617232715844,86.6625
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'drop', 'policy': 'replay'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.86875,0.7845554778176077,86.86875
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'drop', 'policy': 'v2'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.875,0.5172917151802606,86.875
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'pulse', 'policy': 'no_alignment'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.48750000000001,0.6401158393972688,86.48750000000001
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'pulse', 'policy': 'replay'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.53125,0.9792864501725037,86.53125
+results\v2_lr_perturbation\raw_runs.csv,"{'condition': 'pulse', 'policy': 'v2'}",8,"1000,1001,1002,1003,1004,1005,1006,1007",86.46875,0.7177609478794515,86.46875
+results\v2_mechanism\raw_runs.csv,{'policy': 'autoclip'},8,"900,901,902,903,904,905,906,907",79.875,1.7363434890371223,79.875
+results\v2_mechanism\raw_runs.csv,{'policy': 'fixed_matched'},8,"900,901,902,903,904,905,906,907",85.6125,0.9308864634505067,85.6125
+results\v2_mechanism\raw_runs.csv,{'policy': 'frozen'},8,"900,901,902,903,904,905,906,907",80.74375,1.0419013306291791,80.74375
+results\v2_mechanism\raw_runs.csv,{'policy': 'no_alignment'},8,"900,901,902,903,904,905,906,907",86.63125000000001,0.9338815852298505,86.63125000000001
+results\v2_mechanism\raw_runs.csv,{'policy': 'no_exposure'},8,"900,901,902,903,904,905,906,907",81.325,1.2376014391161017,81.325
+results\v2_mechanism\raw_runs.csv,{'policy': 'rate_tracking'},8,"900,901,902,903,904,905,906,907",75.20625000000001,1.8912292550221943,65.97500000000001
+results\v2_mechanism\raw_runs.csv,{'policy': 'replay'},8,"900,901,902,903,904,905,906,907",86.58125,0.5576675393531496,86.58125
+results\v2_mechanism\raw_runs.csv,{'policy': 'v2'},8,"900,901,902,903,904,905,906,907",86.79375,0.661852515398167,86.79375
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'adagc@default', 'family': 'adagc', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",12.10625,3.8840243532547603,9.21875
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'adagc@default', 'family': 'adagc', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",10.66875,1.4001679187005804,2.5500000000000003
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'agc@default', 'family': 'agc', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",85.99375,0.7067211835082162,85.99375
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'agc@default', 'family': 'agc', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",85.55625,0.8952613375256618,85.55625
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@0.5,0.05', 'family': 'dagc', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",83.41875,1.5360208645630689,83.41875
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@0.5,0.05', 'family': 'dagc', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",78.95625000000001,4.307185114203666,78.95625000000001
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.25', 'family': 'fixed', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",86.2625,0.8571762912023855,86.2625
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.25', 'family': 'fixed', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",84.90625,0.7412006966726429,84.90625
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'none@default', 'family': 'none', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",9.65625,0.46248416370159806,5.0125
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'none@default', 'family': 'none', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",9.9,1.1616522846886193,0.0
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'zclip@default', 'family': 'zclip', 'lr': np.float64(0.4)}",8,"0,1,2,3,4,5,6,7",10.29375,1.758405395751384,3.6500000000000004
+results\unstable_band\eval_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'zclip@default', 'family': 'zclip', 'lr': np.float64(0.8)}",8,"0,1,2,3,4,5,6,7",9.7875,1.1280198639492933,1.3
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@0.5,0.05', 'family': 'dagc', 'lr': np.float64(0.4)}",3,"100,101,102",84.01666666666667,0.07171087882826496,84.01666666666667
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@0.5,0.05', 'family': 'dagc', 'lr': np.float64(0.8)}",3,"100,101,102",77.61666666666667,22.706545173570863,77.61666666666667
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@1,0.05', 'family': 'dagc', 'lr': np.float64(0.4)}",3,"100,101,102",83.73333333333333,3.279939892397271,83.73333333333333
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@1,0.05', 'family': 'dagc', 'lr': np.float64(0.8)}",3,"100,101,102",66.23333333333333,46.35335959578,51.33333333333333
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@1,0.15', 'family': 'dagc', 'lr': np.float64(0.4)}",3,"100,101,102",83.68333333333334,1.6540203976117294,83.68333333333334
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@1,0.15', 'family': 'dagc', 'lr': np.float64(0.8)}",3,"100,101,102",51.5,88.69806678325664,48.06666666666668
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@2,0.15', 'family': 'dagc', 'lr': np.float64(0.4)}",3,"100,101,102",56.95,98.44240018206567,53.166666666666664
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'dagc@2,0.15', 'family': 'dagc', 'lr': np.float64(0.8)}",3,"100,101,102",11.5,11.130905231785077,0.0
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.25', 'family': 'fixed', 'lr': np.float64(0.4)}",3,"100,101,102",85.64999999999999,2.239171473729651,85.64999999999999
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.25', 'family': 'fixed', 'lr': np.float64(0.8)}",3,"100,101,102",85.58333333333333,2.0193966828886993,85.58333333333333
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.5', 'family': 'fixed', 'lr': np.float64(0.4)}",3,"100,101,102",85.55000000000001,1.9717231822940953,85.55000000000001
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@0.5', 'family': 'fixed', 'lr': np.float64(0.8)}",3,"100,101,102",82.35,0.7756717518717225,82.35
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@1', 'family': 'fixed', 'lr': np.float64(0.4)}",3,"100,101,102",82.76666666666665,2.324804314255555,82.76666666666665
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@1', 'family': 'fixed', 'lr': np.float64(0.8)}",3,"100,101,102",74.73333333333333,3.335904990851249,74.73333333333333
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@2', 'family': 'fixed', 'lr': np.float64(0.4)}",3,"100,101,102",83.5,1.3435028842378072,83.5
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@2', 'family': 'fixed', 'lr': np.float64(0.8)}",3,"100,101,102",52.13333333333333,74.24749911760995,46.03333333333333
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@4', 'family': 'fixed', 'lr': np.float64(0.4)}",3,"100,101,102",81.16666666666667,0.748683554990484,81.16666666666667
+results\unstable_band\calibration_raw.csv,"{'dataset': 'fashion_mnist', 'model': 'small_cnn', 'optimizer': 'sgd', 'label': 'fixed@4', 'family': 'fixed', 'lr': np.float64(0.8)}",3,"100,101,102",16.116666666666664,26.007727593354428,3.4666666666666663
