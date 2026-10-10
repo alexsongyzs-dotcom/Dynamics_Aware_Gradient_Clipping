@@ -383,6 +383,10 @@ an individual feedback signal.}
 \end{figure*}
 
 \subsection{Earlier exploratory evidence and corrected interpretation}
+The corresponding audited historical plots are retained in
+Appendix~\ref{app:legacy-v2-plots}; they are distinct from the confirmation
+evidence in Figures~\ref{fig:paired} and~\ref{fig:traces}.
+
 The earlier 15-epoch, 5,000-training/2,000-test experiments used different
 training seeds for development and evaluation, but sampled from the same
 official test set for both stages. We therefore classify them as exploratory,
@@ -541,7 +545,6 @@ frequency, $I$ is intensity, and $b$ is lower-bound occupancy.}
 
 \section{Legacy Exploratory Experiments}
 \label{app:legacy}
-\label{app:legacy}
 These experiments precede the new validation-isolated protocol. Each training
 seed selects 5,000 official training images and 2,000 official test images;
 test scores were available during earlier method selection. The CNN is the
@@ -599,6 +602,62 @@ only within-setting seed variation and are descriptive, not selection-adjusted.}
 \input{generated/legacy_development}
 \end{table}
 
+\clearpage
+\subsection{Audited plots of the earlier V2 experiments}
+\label{app:legacy-v2-plots}
+The following plots preserve the earlier evidence without mixing it with the
+completed confirmation study. The benchmark campaigns used 5,000 training and
+2,000 test images, 15 epochs, and eight evaluation seeds per condition. Method
+development had already consulted the official test distribution; fresh seeds
+do not remove that historical selection limitation. Figures below use audited
+records and seed-level Student-$t$ intervals. Their values must not be pooled
+with the full-data, validation-calibrated confirmation outcomes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=.66\textwidth]{figures/audited_v2_benchmarks.pdf}
+\caption{Earlier exploratory V2 benchmarks on four dataset/model/LR conditions.
+The panels preserve recorded local gains and no-clipping failures; they are
+not independent confirmation of an advantage over tuned baselines. The new
+study uses different data sizes, schedules and calibration budgets and finds
+DAGC inferior to tuned fixed clipping in all three conditions.}
+\label{fig:legacy-v2-benchmarks}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=.60\textwidth]{figures/audited_mechanism.pdf}
+\caption{Earlier mechanism controls, eight paired seeds. The intensity-matched
+fixed comparator was selected by calibration clipping intensity, whereas the
+new fixed baseline was selected by validation accuracy. The earlier paired
+intervals do not establish an incremental alignment or online-feedback benefit
+over replay. Zero gain retains moving bounds.}
+\label{fig:legacy-v2-mechanism}
+\end{figure}
+
+\clearpage
+\begin{figure}[H]
+\centering
+\includegraphics[width=.59\textwidth]{figures/audited_trajectories.pdf}
+\caption{Earlier V2 mechanism trajectories: applied threshold, clipping
+intensity and gradient alignment, aggregated over eight paired seeds. Bands
+show across-seed standard deviation, not confidence intervals. The curves
+illustrate threshold profiles and controller activity; similarity or apparent
+reversal alone does not establish predictive information or causal accuracy
+benefit. Compare with the completed confirmation trajectories in
+Figure~\ref{fig:traces}, where lower-bound occupancy and alignment masking are
+supported by a separate full-trace audit.}
+\label{fig:legacy-v2-trajectories}
+\end{figure}
+
+Together, these historical plots explain the progression from promising
+small-subset observations to a stronger comparison with tuned clipping and
+calibration replay. The confirmation results constrain the original mechanism
+interpretation rather than invalidate the recorded exploratory measurements.
+Neither campaign proves that modifying only the lower bound would improve
+accuracy; that intervention has not been tested here.
+
+\clearpage
 \section{Completed Screening Protocol and Negative Gate}
 \label{app:screening}
 This separate screening campaign must not be pooled with the ResNet-20
