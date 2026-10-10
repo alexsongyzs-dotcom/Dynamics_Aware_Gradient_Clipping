@@ -228,25 +228,10 @@ mean $q(x_t)=1-F(e^{x_t})$. The deterministic mean-field system is
  E_t&=\beta E_{t-1}+(1-\beta)q(x_t),\\
  x_{t+1}&=x_t+\gamma\tanh[r(\tau-E_t)].
 \end{align}
-\begin{proposition}
-Suppose $0\leq\beta<1$, $\gamma r>0$, and an interior fixed point
-$c_*>0$ satisfies $1-F(c_*)=\tau$ and $f(c_*)>0$. The mean-field fixed point
-is linearly unstable.
-\end{proposition}
-\begin{proof}
-Write $s=c_*f(c_*)>0$ and $k=\gamma r(1-\beta)s>0$.
-For the state $(x_t,E_{t-1})$, the Jacobian at the fixed point is
-\begin{equation}
- J=\begin{pmatrix}
- 1+k&-\gamma r\beta\\
- -(1-\beta)s&\beta
- \end{pmatrix}.
-\end{equation}
-Its characteristic polynomial is
-$p(\lambda)=\lambda^2-(1+\beta+k)\lambda+\beta$.
-Since $p(1)=-k<0$ and $p(\lambda)\to+\infty$ as
-$\lambda\to+\infty$, it has a real root greater than one.
-\end{proof}
+The interior reference-exposure equilibrium is linearly unstable under
+$0\leq\beta<1$, $\gamma r>0$, and positive density at the reference quantile.
+The exact statement and proof, including the exposure EMA, are given in
+Appendix~\ref{app:math}.
 
 The result includes exposure smoothing; an EMA does not reverse the feedback
 sign. It does not prove instability of neural-network training: the gradient
@@ -502,7 +487,9 @@ A controller can influence an optimization trajectory without the proposed
 feedback signal being necessary for its gains. The replay comparison removes
 threshold adaptation to the confirmation trajectory; the median comparison
 retains online magnitude information but removes exposure and alignment;
-and the no-alignment comparison removes only direction. Their scopes differ,
+and the no-alignment comparison removes only direction. Appendix~\ref{app:math} proves exact replay equivalence, directional
+activation limits, and conditional information-gain identities. Those results
+do not prove that DAGC realizes the optimal feedback rule. Their scopes differ,
 so no single one is a complete mechanistic explanation. The completed risk
 screening additionally supplies no validated predictive or causal mechanism;
 its rare positive labels and sensitive event counts limit what can be inferred.
@@ -780,5 +767,258 @@ Single-seed smoke runs and high-learning-rate pilot selection are retained as
 development artifacts, not replication evidence. The unstable-band tables
 include legacy comparator implementations whose fidelity has not been verified;
 they are not used to establish superiority over published ZClip or AdaGC.
+
+
+\clearpage
+\section{Mathematical Mechanism: Exact Results and Their Limits}
+\label{app:math}
+This appendix separates implementation-level facts from conditional statements
+about the value of feedback. None establishes unconditional test-accuracy
+superiority of DAGC or its alignment term. In particular, a theorem about an
+optimal feedback policy is not a theorem that DAGC realizes that policy.
+
+\subsection{Exposure feedback with exponential smoothing}
+Use the stationary, exogenous norm distribution of Section 3, with inactive
+bounds and no alignment term. Define $x_t=\log c_t$ and
+$q(x)=1-F(e^x)$. The deterministic mean-field recursion is
+\begin{align}
+ E_t&=\beta E_{t-1}+(1-\beta)q(x_t),\\
+ x_{t+1}&=x_t+\gamma\tanh[r(\tau-E_t)].
+\end{align}
+\begin{proposition}
+Suppose $0\leq\beta<1$, $\gamma r>0$, and an interior fixed point
+$c_*>0$ satisfies $1-F(c_*)=\tau$ and $f(c_*)>0$. The mean-field fixed point
+is linearly unstable.
+\end{proposition}
+\begin{proof}
+Write $s=c_*f(c_*)>0$ and $k=\gamma r(1-\beta)s>0$.
+For the state $(x_t,E_{t-1})$, the Jacobian at the fixed point is
+\begin{equation}
+ J=\begin{pmatrix}
+ 1+k&-\gamma r\beta\\
+ -(1-\beta)s&\beta
+ \end{pmatrix}.
+\end{equation}
+Its characteristic polynomial is
+$p(\lambda)=\lambda^2-(1+\beta+k)\lambda+\beta$.
+Since $p(1)=-k<0$ and $p(\lambda)\to+\infty$ as
+$\lambda\to+\infty$, it has a real root greater than one.
+\end{proof}
+The positive eigenvalue exceeding one proves local instability of this
+mean-field equilibrium only. Moving bounds, alignment, and the evolving
+training distribution are excluded assumptions, not small perturbations
+whose effects have been proved negligible.
+
+\subsection{What the direction penalty provably changes}
+\begin{proposition}[One-step monotonicity and saturation]
+Compare two controller updates from the same state $c,E,A$, with the same
+positive bounds $L\leq U$, gains $\gamma\geq0$, $w\geq0$, and reference
+signal $b=r(\tau-E)$. Let
+\begin{align}
+ c^{(0)}&=\Pi_{[L,U]}\big(c\exp[\gamma\tanh b]\big),\\
+ c^{(A)}&=\Pi_{[L,U]}\big(c\exp[\gamma\tanh(b-wz)]\big),\quad
+ z=\max(0,-A).
+\end{align}
+Then
+\begin{equation}
+ 0\leq\log c^{(0)}-\log c^{(A)}\leq\gamma wz.
+\end{equation}
+They are equal when $z=0$, or when both proposals saturate at the same bound.
+If $\gamma wz>0$ and both proposals lie strictly inside the bounds,
+$c^{(A)}<c^{(0)}$.
+\end{proposition}
+\begin{proof}
+In log coordinates, projection is the monotone, 1-Lipschitz map
+$P(x)=\min(\log U,\max(\log L,x))$. The unprojected difference is
+$\gamma[\tanh b-\tanh(b-wz)]$. Monotonicity and the derivative bound
+$0<\tanh'(x)\leq1$ place it in $[0,\gamma wz]$; applying $P$ preserves
+order and cannot increase the difference. Strictness holds without projection
+saturation because $\tanh$ is strictly increasing.
+\end{proof}
+This result concerns the next threshold at a shared state. It does not order
+the full trajectories after the two policies change their gradients, exposures,
+and bounds. A negative instantaneous alignment is also not sufficient for
+activation: the implemented penalty uses the smoothed state $A$.
+
+\begin{proposition}[Inactive direction term gives identical training]
+Start full DAGC and its no-alignment variant with identical model, optimizer,
+controller, and random-stream states. If the full run has $A_t\geq0$ at every
+controller update, their thresholds, model states, and losses are identical
+at every step.
+\end{proposition}
+\begin{proof}
+At the initial shared state the direction penalty is zero. Both policies use
+the same current threshold and sample, hence the same raw and clipped
+gradients. Their exposure, norm history, moving bounds, and optimizer updates
+are identical, giving the same next state. Induction repeats this argument;
+the hypothesis makes the full policy's direction penalty zero at each step.
+\end{proof}
+Thus no strictly positive directional benefit can hold uniformly over all
+training problems. Merely observing a nonzero penalty establishes intervention,
+not improved loss or generalization.
+
+\subsection{Exact replay equivalence and its scope}
+\begin{proposition}[Replay of a run's own applied thresholds]
+Consider any deterministic execution conditional on its initial state and
+complete random stream, including minibatches and augmentation. Save the
+thresholds actually applied by a feedback run. A replay run using that exact
+step-indexed trace, the same initial model/optimizer state, and the same random
+stream has identical raw gradients, clipped gradients, optimizer states,
+parameters, and evaluations at all steps.
+\end{proposition}
+\begin{proof}
+At step zero both executions have the same parameters and training sample,
+so their raw gradients agree. The replayed applied threshold makes clipping
+identical. The deterministic optimizer update, including coupled weight decay
+and momentum, then produces identical next states. Repeat by induction. The
+replay need not reconstruct controller states; it only reproduces its applied
+thresholds, and its diagnostics must not alter the training random stream.
+\end{proof}
+This oracle trace comes from the very run being reproduced and is not our
+independent-calibration comparator. The proposition therefore neither proves
+nor disproves a benefit over calibration-trace replay. It does prove that a
+successful feedback trajectory can be reproduced by a schedule when the
+schedule contains the same realized decisions. In a problem where feedback
+produces the same trace for every seed, independent replay is also identical;
+universal strict dominance of feedback over replay is consequently impossible.
+Replay still responds to the current gradient norm through its clipping
+coefficient; it is not a fixed learning-rate multiplier.
+
+\subsection{When pre-gradient information can strictly help}
+We now give a sufficient-condition analysis that respects causal threshold
+selection. It compares policies at a common random checkpoint, not policies
+whose earlier training has already produced different states.
+Let the objective be $f(\theta)=\kappa\|\theta\|^2/2$, $\kappa>0$.
+Let $v$ denote the previous momentum buffer, $\mu\in[0,1)$, and
+$\eta>0$ the shared step size. Set weight decay to zero in this model.
+A policy chooses a threshold $c$ from $[l,u]$, $0<l<u$, using information
+$\mathcal F$ available before the next stochastic gradient $G$ is drawn.
+Assume $\|G\|>u$ almost surely, so every admissible policy actively clips.
+Write $U=G/\|G\|$, and suppose all second moments needed below are finite.
+Then the actual momentum update is
+\begin{equation}
+ \theta^+=\theta-\eta(\mu v+cU),\qquad \|U\|=1.
+\end{equation}
+Define the scalar conditional prediction
+\begin{equation}
+ H_{\mathcal F}=
+ \mathbb E[\langle\theta/\eta-\mu v,U\rangle\mid\mathcal F].
+ \label{eq:conditional-H}
+\end{equation}
+The random state and the future gradient have the same joint distribution
+for every policy in this one-step comparison. Policies may change $c$, but
+may not change that checkpoint distribution or use the future $G$ to choose it.
+
+\begin{proposition}[Optimal causal threshold and approximation cost]
+In this model the optimal $\mathcal F$-measurable threshold is
+$c^*_{\mathcal F}=\Pi_{[l,u]}H_{\mathcal F}$. If
+$l<H_{\mathcal F}<u$ almost surely, any admissible feedback rule $c_D$ satisfies
+\begin{equation}
+ \mathbb E f(\theta_D^+)-\mathbb E f(\theta_*^+)
+ =\frac{\kappa\eta^2}{2}
+   \mathbb E(c_D-H_{\mathcal F})^2.
+ \label{eq:approx-cost}
+\end{equation}
+Without the interior assumption, the difference is at least
+$\kappa\eta^2\mathbb E(c_D-c^*_{\mathcal F})^2/2$.
+\end{proposition}
+\begin{proof}
+Expanding the squared norm gives
+\begin{equation}
+ f(\theta^+)=\frac{\kappa}{2}\|\theta-\eta\mu v\|^2
+ +\frac{\kappa\eta^2}{2}c^2
+ -\kappa\eta^2c\langle\theta/\eta-\mu v,U\rangle.
+\end{equation}
+Take conditional expectations and use measurability of $c$. The terms
+depending on the chosen threshold become
+$\kappa\eta^2[(c-H_{\mathcal F})^2-H_{\mathcal F}^2]/2$.
+Pointwise minimization over $[l,u]$ yields projection. In the interior the
+optimal squared term vanishes, proving Eq.~\eqref{eq:approx-cost}. For a
+projected optimum, the projection inequality
+$(c_D-c^*)(c^*-H_{\mathcal F})\geq0$ yields the stated lower bound after
+expanding the difference of squares.
+\end{proof}
+
+\begin{proposition}[Exact benefit over a predetermined threshold]
+Under the interior assumptions above, the best constant threshold at that
+step is $\bar c=\mathbb E H_{\mathcal F}$. Its advantage relative to any
+admissible causal rule $c_D$ is exactly
+\begin{equation}
+ \mathbb E f(\theta_{\bar c}^+)-\mathbb E f(\theta_D^+)
+ =\frac{\kappa\eta^2}{2}
+ \left[\operatorname{Var}(H_{\mathcal F})
+       -\mathbb E(c_D-H_{\mathcal F})^2\right].
+ \label{eq:feedback-gain}
+\end{equation}
+Hence the feedback rule strictly improves expected one-step loss if and only
+if its squared approximation error is smaller than
+$\operatorname{Var}(H_{\mathcal F})$.
+\end{proposition}
+\begin{proof}
+A constant policy minimizes
+$\mathbb E(c-H_{\mathcal F})^2$ at $c=\mathbb E H_{\mathcal F}$, which
+is admissible because $H_{\mathcal F}\in(l,u)$ almost surely.
+Its minimum value is $\operatorname{Var}(H_{\mathcal F})$. Subtract the
+two risks using Eq.~\eqref{eq:approx-cost}.
+\end{proof}
+A calibration-generated replay value is constant across new runs at a fixed
+step, conditional on the independent calibration archive. The result applies
+to such a common-state, one-step comparison if its other assumptions hold.
+It does not apply directly to complete DAGC/replay runs with different states,
+moving bounds, or intermittently inactive clipping.
+
+\subsection{Exact value of additional directional information}
+\begin{proposition}[Information gain versus policy error]
+Let $\mathcal F_0\subseteq\mathcal F_1$ be two pre-gradient information sets;
+the latter may add stored alignment history. Define $H_j$ by
+Eq.~\eqref{eq:conditional-H} using $\mathcal F_j$, and assume
+$l<H_j<u$ almost surely for $j=0,1$. The difference between the optimal
+policies is
+\begin{equation}
+ \mathbb E f(\theta_{H_0}^+)-\mathbb E f(\theta_{H_1}^+)
+ =\frac{\kappa\eta^2}{2}\mathbb E(H_1-H_0)^2.
+ \label{eq:direction-information}
+\end{equation}
+For actual policies $c_0,c_1$ measurable with respect to their respective
+information sets, the exact difference is
+\begin{align}
+ &\mathbb E f(\theta_{c_0}^+)-\mathbb E f(\theta_{c_1}^+)\\
+ &\quad=\frac{\kappa\eta^2}{2}\left[
+ \mathbb E(H_1-H_0)^2+\mathbb E(c_0-H_0)^2
+ -\mathbb E(c_1-H_1)^2\right].
+\end{align}
+\end{proposition}
+\begin{proof}
+The tower property gives
+$\mathbb E(H_1\mid\mathcal F_0)=H_0$.
+Since $H_0$ and $c_0$ are $\mathcal F_0$-measurable,
+$\mathbb E[(c_0-H_0)(H_1-H_0)]=0$. Thus
+$\mathbb E(c_0-H_1)^2=
+\mathbb E(c_0-H_0)^2+\mathbb E(H_1-H_0)^2$.
+Use the expanded risk conditional on $\mathcal F_1$ and subtract the two
+policies. Taking $c_j=H_j$ proves Eq.~\eqref{eq:direction-information}.
+\end{proof}
+Additional alignment information helps the ideal policy strictly only if it
+changes the conditional prediction on a set of positive probability.
+Even then a particular direction penalty can lose that benefit through policy
+approximation error. Its sign and coefficient cannot be justified by the
+mere availability of directional information.
+
+\subsection{Why threshold tightening alone is not a proof of improvement}
+Set $f(\theta)=\theta^2/2$, $\theta=1$, $v=0$, $U=G=1$.
+Both $c_h=0.8$ and $c_l=0.4$ actively clip. At $\eta=0.1$, their next
+losses are 0.4232 and 0.4608: tightening increases loss by 0.0376.
+At $\eta=3$, losses are 0.98 and 0.02: tightening decreases loss by 0.96.
+A negative stored alignment does not identify which step-size regime holds.
+These one-step examples refute universal benefit from tightening; they are
+not complete DAGC training trajectories.
+
+\paragraph{What remains unproved for DAGC.}
+DAGC has not been shown to predict $H_{\mathcal F}$ accurately enough,
+to obtain incremental information from alignment, or to satisfy this model's
+assumptions throughout training. G1 estimates a different risk target.
+Consequently, these conditional proofs explain when feedback can help;
+they do not establish DAGC's empirical incremental benefit or generalization.
+Paired replay, median, no-alignment, and bound-only controls remain needed.
 
 \end{document}
