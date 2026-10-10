@@ -2,6 +2,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{microtype}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage{booktabs}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{algorithm}
@@ -13,6 +14,7 @@
 \newcommand{\clip}{\operatorname{clip}}
 \icmltitlerunning{DAGC: Feedback and Threshold Scheduling}
 \begin{document}
+\raggedbottom
 \twocolumn[
 \icmltitle{Dynamics-Aware Gradient Clipping:\\Separating Feedback from Threshold Scheduling}
 \begin{icmlauthorlist}
@@ -82,36 +84,87 @@ RGB images. The scope is small image classifiers trained with momentum SGD;
 there is no claim of broad optimizer, architecture, or language-model transfer.
 
 \section{Related Work}
-\paragraph{Adaptive thresholds.}
-AutoClip selects a percentile of the observed gradient-norm history
-\citep{seetharaman2020autoclip}. AGC bounds each output unit's gradient norm
-relative to its parameter norm \citep{brock2021high}. These supply magnitude-based
-comparators with different invariances and granularities. The median control
-in our study is simpler: it multiplies a lagged rolling median of global norms
-by a fixed coefficient. It is motivated by the moving bound already present
-inside DAGC, rather than proposed as a new clipping algorithm.
+\paragraph{Adaptive gradient and update clipping.}
+Fixed norm clipping was popularized for recurrent-network optimization
+\citep{pascanu2013difficulty}. AutoClip derives a global threshold from
+historical norm percentiles \citep{seetharaman2020autoclip}; AGC instead
+uses unit-wise parameter magnitude \citep{brock2021high}. ACClip uses
+coordinate-wise adaptation in attention models \citep{zhang2020gradient}.
+ZClip detects norm spikes through running statistics \citep{kumar2025zclip},
+whereas the revised AdaGC bounds tensor gradients relative to historical
+clipped-norm estimates \citep{wang2025adagc}. Group-level historical control
+also appears in AGGC \citep{li2026aggc}. These rules differ in granularity,
+reference scale, and treatment of anomalous gradients. DAGC uses one global
+threshold with exposure and consecutive-gradient alignment; its distinction
+must be tested against these simpler information sources, not inferred from
+the general novelty of an adaptive threshold.
 
-\paragraph{Rate feedback and clipping theory.}
-Adaptive clipping for private federated learning estimates a desired norm
-quantile online \citep{andrew2021adaptive}. Expressed in terms of clipping
-frequency, excess clipping increases its threshold. DAGC-V2 uses the opposite
-sign; it is neither a quantile estimator nor the first multiplicative
-clipping-rate controller. Analyses of clipping under relaxed smoothness
-\citep{zhang2020why} and of stochastic clipping bias
-\citep{koloskova2023revisiting} show why clipping can affect optimization,
-but do not establish convergence of DAGC. Our proposition addresses a local
-controller model with an exogenous norm distribution, not the full learning
-process.
+Clippy constrains optimizer updates in multitask ranking
+\citep{tang2023clippy}. This distinction matters because raw-gradient clipping
+does not directly bound the parameter step after momentum or preconditioning.
+StableAdamW addresses underestimated second-moment states in vision-language
+training \citep{wortsman2023stableadamw}. Such optimizer-specific protections
+motivate our explicit clipping order, but their large-scale results are not
+experimental evidence for DAGC.
+
+\paragraph{Rate feedback, quantiles, and robust estimation.}
+Adaptive private federated clipping estimates a desired norm quantile online
+\citep{andrew2021adaptive}. Quantile clipping has also been studied through
+robust stochastic optimization \citep{merad2024quantile} and adaptive
+DP-SGD convergence analysis \citep{shulgin2024adaptive}. These analyses
+highlight clipping bias and the joint role of threshold and stepsize schedules.
+The geometric treatment of private SGD likewise shows that clipping can bias
+an update \citep{chen2020geometric}. DAGC is neither a privacy mechanism nor
+a quantile estimator: its excess-exposure response has the opposite sign to
+rate tracking. Median-gradient estimators connect some clipping methods to
+robust location estimation \citep{schaipp2025median}, but estimating a median
+gradient vector is distinct from our scalar rolling-median norm control.
+
+\paragraph{Optimization theory and heavy-tailed noise.}
+Relaxed-smoothness analyses explain why clipping can accelerate optimization
+\citep{zhang2020why,bohang2020improved}. Stability and convergence results
+also cover rapidly growing subgradients and clipped momentum
+\citep{mai2021stability}. Stochastic bias can limit convergence even when
+clipping prevents large updates \citep{koloskova2023revisiting}.
+Empirical tail-index studies \citep{simsekli2019tail} and attention-model
+analysis \citep{zhang2020gradient} motivate considering non-Gaussian gradient
+noise. Accelerated clipping and normalized clipped momentum provide
+heavy-tail guarantees under stated assumptions
+\citep{gorbunov2020heavy,cutkosky2021tails}; newer work separates the roles
+of normalization and clipping \citep{sun2025revisiting}. We neither estimate
+a tail index nor verify these assumptions for our networks. These results
+supply context, not a convergence theorem for the DAGC controller coupled
+to neural-network training.
+
+\paragraph{Adaptation, architecture, and training scale.}
+AdaGrad \citep{duchi2011adaptive} and AdaGrad-Norm
+\citep{ward2019adagrad} adapt step scales using past gradients; Adam
+\citep{kingma2015adam} adds coordinate-wise moment estimates. AdamW
+separates weight decay from its adaptive update \citep{loshchilov2019adamw},
+while LAMB uses layer-wise update scaling \citep{you2020lamb}. These are
+alternative ways to change update magnitude rather than evidence that a
+specific clipping feedback signal is informative. Initialization and momentum
+also materially affect optimization \citep{glorot2010understanding,sutskever2013importance}.
+Batch normalization \citep{ioffe2015batch,santurkar2018batch} and residual
+connections \citep{he2016deep} change the training setting, so gains on a
+small CNN cannot automatically transfer to a residual model. Small-scale
+Transformer proxies reproduce selected instabilities under explicit
+conditions \citep{wortsman2024smallscale}; our image experiments do not
+establish a corresponding language-model transfer claim.
 
 \paragraph{Evidence for a mechanism.}
-Variation in initialization and hyperparameter selection can materially change
-benchmark conclusions \citep{bouthillier2021accounting}. We treat a training
-seed as the replication unit and report differences within paired seeds.
-The official test set is withheld from the new campaign's tuning. Earlier
-FashionMNIST test scores were used during method development, so this
-retrospective correction does not make the project's historical test exposure
-disappear. We distinguish the new fixed protocol from a completely untouched
-external benchmark.
+Benchmark variance \citep{bouthillier2021accounting}, selection bias
+\citep{cawley2010selection}, and finite hyperparameter-search budgets
+\citep{bergstra2012random} motivate paired seeds and validation-only selection.
+Freshly collected benchmark tests can change absolute scores
+\citep{recht2019generalize}; withholding a test set during the new campaign
+does not erase earlier exposure to it. Statistical comparisons must respect
+the replication unit and test assumptions \citep{dror2018significance}.
+We distinguish descriptive legacy evidence, multiplicity-corrected
+confirmation \citep{holm1979simple}, and equivalence within a stated
+practical margin \citep{lakens2017equivalence}. This prevents a null replay
+comparison from being presented either as proof of superiority or as
+proof of equivalence.
 
 \section{Controller and Competing Explanations}
 Let $g_t=\nabla_\theta\ell_t(\theta_t)$ be the raw minibatch gradient, and let
@@ -164,33 +217,11 @@ and a 200-element norm window. Its diagnostic alignment requires an $O(d)$
 dot product. We do not describe it as constant-memory control.
 
 \subsection{The reference exposure is not a stable target}
-Consider a stationary, exogenous norm distribution with differentiable CDF
-$F$ and density $f$. Remove the alignment term and assume the bounds are
-inactive. With $x_t=\log c_t$, replace the binary exposure by its conditional
-mean $q(x_t)=1-F(e^{x_t})$. The deterministic mean-field system is
-\begin{align}
- E_t&=\beta E_{t-1}+(1-\beta)q(x_t),\\
- x_{t+1}&=x_t+\gamma\tanh[r(\tau-E_t)].
-\end{align}
-\begin{proposition}
-Suppose $0\leq\beta<1$, $\gamma r>0$, and an interior fixed point
-$c_*>0$ satisfies $1-F(c_*)=\tau$ and $f(c_*)>0$. The mean-field fixed point
-is linearly unstable.
-\end{proposition}
-\begin{proof}
-Write $s=c_*f(c_*)>0$ and $k=\gamma r(1-\beta)s>0$.
-For the state $(x_t,E_{t-1})$, the Jacobian at the fixed point is
-\begin{equation}
- J=\begin{pmatrix}
- 1+k&-\gamma r\beta\\
- -(1-\beta)s&\beta
- \end{pmatrix}.
-\end{equation}
-Its characteristic polynomial is
-$p(\lambda)=\lambda^2-(1+\beta+k)\lambda+\beta$.
-Since $p(1)=-k<0$ and $p(\lambda)\to+\infty$ as
-$\lambda\to+\infty$, it has a real root greater than one.
-\end{proof}
+For a stationary, exogenous gradient-norm distribution, with alignment disabled
+and inactive bounds, the exposure-EMA mean-field system has a linearly unstable
+interior reference-exposure fixed point whenever the density at that threshold
+is positive. Appendix~\ref{app:math} gives the assumptions, Jacobian and complete
+proof, together with conditional results on alignment masking and replay.
 
 The result includes exposure smoothing; an EMA does not reverse the feedback
 sign. It does not prove instability of neural-network training: the gradient
@@ -399,6 +430,12 @@ model freezes the norm distribution; its unstable controller equilibrium is
 not a theorem about the nonlinear coupled training system. Likewise, lower-bound
 occupancy and accuracy correlation cannot identify a causal mechanism alone.
 
+Appendix~\ref{app:math} proves conditional results on projection masking,
+exact same-run replay, and the value of causal information. These results do
+not establish that DAGC realizes an optimal feedback policy or outperforms
+independent-calibration replay; the confirmation results do not support either
+claim.
+
 \section{Conclusion}
 DAGC-V2 implements positive exposure feedback, not stable target-rate tracking
 in the stationary mean-field model. A useful empirical claim must therefore
@@ -423,6 +460,13 @@ applications; broader deployment consequences depend on the model and use.
 \appendix
 
 \section{Reproducibility and Complete Calibration}
+The complete code, compact evidence, and manuscript are available at
+\url{https://github.com/alexsongyzs-dotcom/Dynamics_Aware_Gradient_Clipping/tree/develop/yzs}.
+The completed confirmation protocol is in \texttt{\detokenize{docs/lyx1_protocol.md}};
+seed-level records and audit hashes are in \texttt{results/lyx1/evidence/}.
+The original full-resolution server archive is required to rerun exact trace
+equality checks; binned exports alone cannot establish those equalities.
+
 The machine-readable protocol fixes conditions, hyperparameter grids,
 calibration and confirmation seeds, and comparison families before confirmation.
 The source/configuration digest is checked when a run is resumed or reused.
@@ -493,6 +537,7 @@ frequency, $I$ is intensity, and $b$ is lower-bound occupancy.}
 
 \section{Legacy Exploratory Experiments}
 \label{app:legacy}
+\label{app:legacy}
 These experiments precede the new validation-isolated protocol. Each training
 seed selects 5,000 official training images and 2,000 official test images;
 test scores were available during earlier method selection. The CNN is the
@@ -549,5 +594,366 @@ combination. Gains are not pooled as independent replicates. Intervals reflect
 only within-setting seed variation and are descriptive, not selection-adjusted.}
 \input{generated/legacy_development}
 \end{table}
+
+\section{Completed Screening Protocol and Negative Gate}
+\label{app:screening}
+This separate screening campaign must not be pooled with the ResNet-20
+confirmation study. It used ResNet-18 for CIFAR-10, two screening seeds,
+20 epochs, and validation evaluation. Training/validation sizes were
+55,000/5,000 for FashionMNIST and 45,000/5,000 for CIFAR-10, split seed 1729.
+The SGD learning-rate grids were $\{0.05,0.2,0.4,0.8\}$ for FashionMNIST
+and $\{0.05,0.1,0.2,0.4,0.8\}$ for CIFAR-10; the AdamW grid was
+$\{0.0003,0.001,0.003,0.01\}$. Each learning rate included no clipping and
+fixed thresholds $\{0.1,0.3,1,3,10\}$.
+
+\begin{table}[h]
+\centering\small
+\caption{Completed screening outcomes. These are validation screening runs,
+not independent confirmation of DAGC. Adverse events are counts across runs.}
+\begin{tabular}{lrrrr}
+\toprule
+Family & Runs & Full budget & Early stops & Adverse events\\
+\midrule
+FashionMNIST / SmallCNN / SGD & 48 & 46 & 2 & 14\\
+CIFAR-10 / ResNet-18 / SGD & 60 & 60 & 0 & 0\\
+CIFAR-10 / ResNet-18 / AdamW & 48 & 48 & 0 & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The frozen adverse-event label included a loss spike after step 50 above
+$\max(5,2.5\,\mathrm{previous\ loss\ EMA})$, nonfinite loss/gradient/update,
+or loss above 100. Future labels covered steps 1--20; unknown negative tails
+were censored and observed terminal positives were retained. Labels were
+constructed before every-fifth-step subsampling. Base predictors included
+progress, learning rate, loss and its slope, gradient/update norms, alignment,
+and optimizer-state proxies. Added history features were exposure EMA,
+duty cycle, switching rate, burst age, time since transition, and intensity.
+Grouped evaluation held out seeds, complete configurations, or families;
+individual steps were never randomly split across training and evaluation.
+
+G1 required at least ten informative runs in every grouped analysis, a mean
+AUPRC increment of at least 0.01, a bootstrap lower bound above zero, and
+positive mean increments in all three families. Only two runs were evaluable:
+FashionMNIST, LR 0.8, fixed threshold 3, seeds 0 and 1. The exploratory
+seed-held-out interval was $[-0.002269,0.002196]$; the configuration-held-out
+interval was $[-0.061966,-0.001883]$. Neither can justify population-wide
+inference with two screening seeds. Withholding FashionMNIST left no positive
+training labels; withholding either CIFAR family left no positive evaluation
+labels, preventing the required family-held-out comparison.
+
+Event-count robustness used on/off margins $\{0.02,0.05,0.1\}$ and dwell
+values $\{1,3,5\}$. For runs with median count at least two, the relative
+range $(\max-\min)/\mathrm{median}$ had to be at most 0.5. Only 27/63 met
+this criterion; the campaign required at least 75\%. Thresholds and labels
+were not revised retrospectively to make the gate pass.
+
+The two early stops were FashionMNIST at LR 0.8, seed 0: no clipping stopped
+after 10 steps (loss 2605.40), and threshold 10 after 12 steps (loss 160.40).
+Their outcomes remain in the screening map at zero accuracy. Runs with finite
+chance-level accuracy retain their observed values. There were no process
+errors; maintenance interruptions were not counted as scientific failures.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/server30_p1_screening.png}
+\caption{Complete validation screening map, averaged over two seeds per
+configuration; instability stops contribute zero accuracy. The map describes
+screening behavior and does not replace paired confirmation.}
+\end{figure}
+
+The accompanying \texttt{evidence/} directory contains all 156 run summaries,
+the G1 report, the verification record, and the frozen screening protocol.
+The source is \texttt{develop/lyx} commit \texttt{bbc9214}; the ongoing
+confirmation draft is based on \texttt{develop/lyx1} commit \texttt{050beca}.
+Code and public screening records are available at
+\url{https://github.com/alexsongyzs-dotcom/Dynamics_Aware_Gradient_Clipping}.
+At this revision, no complete audited confirmation export was committed.
+Pending-result text is deliberately retained and is not a final study finding.
+
+
+\section{Original V1 Benchmarks and Additional Exploratory Figures}
+The initial A3 and A4 studies used V1 with initial threshold 1.0; they must
+not be presented as V2 evaluations. A3 has five seeds per variant and A4
+has five seeds per policy in each of eight dataset/model/optimizer settings.
+V1 does not uniformly outperform the no-clipping baseline. Their raw tables
+lack explicit failure flags, so the figures report the recorded scores rather
+than asserting that all runs were failure-free. Historical normal-approximation
+error bars are replaced here with Student-$t$ intervals. Complete audit records
+and source hashes accompany this manuscript in \texttt{audit\_20261010/}.
+\begin{figure}[H]
+\centering\includegraphics[width=.70\textwidth]{figures/audited_a3_v1.pdf}
+\caption{Original V1 ablations, five seeds per variant. Zero gain retains moving bounds; it is distinct from fixed global clipping.}
+\end{figure}
+\begin{figure}[H]
+\centering\includegraphics[width=.90\textwidth]{figures/audited_a4_v1.pdf}
+\caption{All eight original A4 settings, five seeds per policy. Error bars are Student-$t$ 95\% intervals and scores are exploratory.}
+\end{figure}
+\begin{figure}[H]
+\centering\includegraphics[width=.90\textwidth]{figures/audited_reference_sweep.pdf}
+\caption{Development reference sweep stratified by controller gain. Each point has three seeds; gains are not pooled. Realized exposure differs from the reference and cannot be interpreted as target-rate tracking.}
+\end{figure}
+\begin{figure}[H]
+\centering\includegraphics[width=.65\textwidth]{figures/audited_perturbations.pdf}
+\caption{Exploratory learning-rate perturbations, eight paired seeds. V2-minus-replay intervals span zero; nonsignificance is not equivalence.}
+\end{figure}
+Single-seed smoke runs and high-learning-rate pilot selection are retained as
+development artifacts, not replication evidence. The unstable-band tables
+include legacy comparator implementations whose fidelity has not been verified;
+they are not used to establish superiority over published ZClip or AdaGC.
+
+
+\clearpage
+\section{Mathematical Mechanism: Exact Results and Their Limits}
+\label{app:math}
+This appendix separates implementation-level facts from conditional statements
+about the value of feedback. None establishes unconditional test-accuracy
+superiority of DAGC or its alignment term. In particular, a theorem about an
+optimal feedback policy is not a theorem that DAGC realizes that policy.
+
+\subsection{Exposure feedback with exponential smoothing}
+Use the stationary, exogenous norm distribution of Section 3, with inactive
+bounds and no alignment term. Define $x_t=\log c_t$ and
+$q(x)=1-F(e^x)$. The deterministic mean-field recursion is
+\begin{align}
+ E_t&=\beta E_{t-1}+(1-\beta)q(x_t),\\
+ x_{t+1}&=x_t+\gamma\tanh[r(\tau-E_t)].
+\end{align}
+\begin{proposition}
+Suppose $0\leq\beta<1$, $\gamma r>0$, and an interior fixed point
+$c_*>0$ satisfies $1-F(c_*)=\tau$ and $f(c_*)>0$. The mean-field fixed point
+is linearly unstable.
+\end{proposition}
+\begin{proof}
+Write $s=c_*f(c_*)>0$ and $k=\gamma r(1-\beta)s>0$.
+For the state $(x_t,E_{t-1})$, the Jacobian at the fixed point is
+\begin{equation}
+ J=\begin{pmatrix}
+ 1+k&-\gamma r\beta\\
+ -(1-\beta)s&\beta
+ \end{pmatrix}.
+\end{equation}
+Its characteristic polynomial is
+$p(\lambda)=\lambda^2-(1+\beta+k)\lambda+\beta$.
+Since $p(1)=-k<0$ and $p(\lambda)\to+\infty$ as
+$\lambda\to+\infty$, it has a real root greater than one.
+\end{proof}
+The positive eigenvalue exceeding one proves local instability of this
+mean-field equilibrium only. Moving bounds, alignment, and the evolving
+training distribution are excluded assumptions, not small perturbations
+whose effects have been proved negligible.
+
+\subsection{What the direction penalty provably changes}
+\begin{proposition}[One-step monotonicity and saturation]
+Compare two controller updates from the same state $c,E,A$, with the same
+positive bounds $L\leq U$, gains $\gamma\geq0$, $w\geq0$, and reference
+signal $b=r(\tau-E)$. Let
+\begin{align}
+ c^{(0)}&=\Pi_{[L,U]}\big(c\exp[\gamma\tanh b]\big),\\
+ c^{(A)}&=\Pi_{[L,U]}\big(c\exp[\gamma\tanh(b-wz)]\big),\quad
+ z=\max(0,-A).
+\end{align}
+Then
+\begin{equation}
+ 0\leq\log c^{(0)}-\log c^{(A)}\leq\gamma wz.
+\end{equation}
+They are equal when $z=0$, or when both proposals saturate at the same bound.
+If $\gamma wz>0$ and both proposals lie strictly inside the bounds,
+$c^{(A)}<c^{(0)}$.
+\end{proposition}
+\begin{proof}
+In log coordinates, projection is the monotone, 1-Lipschitz map
+$P(x)=\min(\log U,\max(\log L,x))$. The unprojected difference is
+$\gamma[\tanh b-\tanh(b-wz)]$. Monotonicity and the derivative bound
+$0<\tanh'(x)\leq1$ place it in $[0,\gamma wz]$; applying $P$ preserves
+order and cannot increase the difference. Strictness holds without projection
+saturation because $\tanh$ is strictly increasing.
+\end{proof}
+This result concerns the next threshold at a shared state. It does not order
+the full trajectories after the two policies change their gradients, exposures,
+and bounds. A negative instantaneous alignment is also not sufficient for
+activation: the implemented penalty uses the smoothed state $A$.
+
+\begin{proposition}[Inactive direction term gives identical training]
+Start full DAGC and its no-alignment variant with identical model, optimizer,
+controller, and random-stream states. If the full run has $A_t\geq0$ at every
+controller update, their thresholds, model states, and losses are identical
+at every step.
+\end{proposition}
+\begin{proof}
+At the initial shared state the direction penalty is zero. Both policies use
+the same current threshold and sample, hence the same raw and clipped
+gradients. Their exposure, norm history, moving bounds, and optimizer updates
+are identical, giving the same next state. Induction repeats this argument;
+the hypothesis makes the full policy's direction penalty zero at each step.
+\end{proof}
+Thus no strictly positive directional benefit can hold uniformly over all
+training problems. Merely observing a nonzero penalty establishes intervention,
+not improved loss or generalization.
+
+\subsection{Exact replay equivalence and its scope}
+\begin{proposition}[Replay of a run's own applied thresholds]
+Consider any deterministic execution conditional on its initial state and
+complete random stream, including minibatches and augmentation. Save the
+thresholds actually applied by a feedback run. A replay run using that exact
+step-indexed trace, the same initial model/optimizer state, and the same random
+stream has identical raw gradients, clipped gradients, optimizer states,
+parameters, and evaluations at all steps.
+\end{proposition}
+\begin{proof}
+At step zero both executions have the same parameters and training sample,
+so their raw gradients agree. The replayed applied threshold makes clipping
+identical. The deterministic optimizer update, including coupled weight decay
+and momentum, then produces identical next states. Repeat by induction. The
+replay need not reconstruct controller states; it only reproduces its applied
+thresholds, and its diagnostics must not alter the training random stream.
+\end{proof}
+This oracle trace comes from the very run being reproduced and is not our
+independent-calibration comparator. The proposition therefore neither proves
+nor disproves a benefit over calibration-trace replay. It does prove that a
+successful feedback trajectory can be reproduced by a schedule when the
+schedule contains the same realized decisions. In a problem where feedback
+produces the same trace for every seed, independent replay is also identical;
+universal strict dominance of feedback over replay is consequently impossible.
+Replay still responds to the current gradient norm through its clipping
+coefficient; it is not a fixed learning-rate multiplier.
+
+\subsection{When pre-gradient information can strictly help}
+We now give a sufficient-condition analysis that respects causal threshold
+selection. It compares policies at a common random checkpoint, not policies
+whose earlier training has already produced different states.
+Let the objective be $f(\theta)=\kappa\|\theta\|^2/2$, $\kappa>0$.
+Let $v$ denote the previous momentum buffer, $\mu\in[0,1)$, and
+$\eta>0$ the shared step size. Set weight decay to zero in this model.
+A policy chooses a threshold $c$ from $[l,u]$, $0<l<u$, using information
+$\mathcal F$ available before the next stochastic gradient $G$ is drawn.
+Assume $\|G\|>u$ almost surely, so every admissible policy actively clips.
+Write $U=G/\|G\|$, and suppose all second moments needed below are finite.
+Then the actual momentum update is
+\begin{equation}
+ \theta^+=\theta-\eta(\mu v+cU),\qquad \|U\|=1.
+\end{equation}
+Define the scalar conditional prediction
+\begin{equation}
+ H_{\mathcal F}=
+ \mathbb E[\langle\theta/\eta-\mu v,U\rangle\mid\mathcal F].
+ \label{eq:conditional-H}
+\end{equation}
+The random state and the future gradient have the same joint distribution
+for every policy in this one-step comparison. Policies may change $c$, but
+may not change that checkpoint distribution or use the future $G$ to choose it.
+
+\begin{proposition}[Optimal causal threshold and approximation cost]
+In this model the optimal $\mathcal F$-measurable threshold is
+$c^*_{\mathcal F}=\Pi_{[l,u]}H_{\mathcal F}$. If
+$l<H_{\mathcal F}<u$ almost surely, any admissible feedback rule $c_D$ satisfies
+\begin{equation}
+ \mathbb E f(\theta_D^+)-\mathbb E f(\theta_*^+)
+ =\frac{\kappa\eta^2}{2}
+   \mathbb E(c_D-H_{\mathcal F})^2.
+ \label{eq:approx-cost}
+\end{equation}
+Without the interior assumption, the difference is at least
+$\kappa\eta^2\mathbb E(c_D-c^*_{\mathcal F})^2/2$.
+\end{proposition}
+\begin{proof}
+Expanding the squared norm gives
+\begin{equation}
+ f(\theta^+)=\frac{\kappa}{2}\|\theta-\eta\mu v\|^2
+ +\frac{\kappa\eta^2}{2}c^2
+ -\kappa\eta^2c\langle\theta/\eta-\mu v,U\rangle.
+\end{equation}
+Take conditional expectations and use measurability of $c$. The terms
+depending on the chosen threshold become
+$\kappa\eta^2[(c-H_{\mathcal F})^2-H_{\mathcal F}^2]/2$.
+Pointwise minimization over $[l,u]$ yields projection. In the interior the
+optimal squared term vanishes, proving Eq.~\eqref{eq:approx-cost}. For a
+projected optimum, the projection inequality
+$(c_D-c^*)(c^*-H_{\mathcal F})\geq0$ yields the stated lower bound after
+expanding the difference of squares.
+\end{proof}
+
+\begin{proposition}[Exact benefit over a predetermined threshold]
+Under the interior assumptions above, the best constant threshold at that
+step is $\bar c=\mathbb E H_{\mathcal F}$. Its advantage relative to any
+admissible causal rule $c_D$ is exactly
+\begin{equation}
+ \mathbb E f(\theta_{\bar c}^+)-\mathbb E f(\theta_D^+)
+ =\frac{\kappa\eta^2}{2}
+ \left[\operatorname{Var}(H_{\mathcal F})
+       -\mathbb E(c_D-H_{\mathcal F})^2\right].
+ \label{eq:feedback-gain}
+\end{equation}
+Hence the feedback rule strictly improves expected one-step loss if and only
+if its squared approximation error is smaller than
+$\operatorname{Var}(H_{\mathcal F})$.
+\end{proposition}
+\begin{proof}
+A constant policy minimizes
+$\mathbb E(c-H_{\mathcal F})^2$ at $c=\mathbb E H_{\mathcal F}$, which
+is admissible because $H_{\mathcal F}\in(l,u)$ almost surely.
+Its minimum value is $\operatorname{Var}(H_{\mathcal F})$. Subtract the
+two risks using Eq.~\eqref{eq:approx-cost}.
+\end{proof}
+A calibration-generated replay value is constant across new runs at a fixed
+step, conditional on the independent calibration archive. The result applies
+to such a common-state, one-step comparison if its other assumptions hold.
+It does not apply directly to complete DAGC/replay runs with different states,
+moving bounds, or intermittently inactive clipping.
+
+\subsection{Exact value of additional directional information}
+\begin{proposition}[Information gain versus policy error]
+Let $\mathcal F_0\subseteq\mathcal F_1$ be two pre-gradient information sets;
+the latter may add stored alignment history. Define $H_j$ by
+Eq.~\eqref{eq:conditional-H} using $\mathcal F_j$, and assume
+$l<H_j<u$ almost surely for $j=0,1$. The difference between the optimal
+policies is
+\begin{equation}
+ \mathbb E f(\theta_{H_0}^+)-\mathbb E f(\theta_{H_1}^+)
+ =\frac{\kappa\eta^2}{2}\mathbb E(H_1-H_0)^2.
+ \label{eq:direction-information}
+\end{equation}
+For actual policies $c_0,c_1$ measurable with respect to their respective
+information sets, the exact difference is
+\begin{align}
+ &\mathbb E f(\theta_{c_0}^+)-\mathbb E f(\theta_{c_1}^+)\\
+ &\quad=\frac{\kappa\eta^2}{2}\left[
+ \mathbb E(H_1-H_0)^2+\mathbb E(c_0-H_0)^2
+ -\mathbb E(c_1-H_1)^2\right].
+\end{align}
+\end{proposition}
+\begin{proof}
+The tower property gives
+$\mathbb E(H_1\mid\mathcal F_0)=H_0$.
+Since $H_0$ and $c_0$ are $\mathcal F_0$-measurable,
+$\mathbb E[(c_0-H_0)(H_1-H_0)]=0$. Thus
+$\mathbb E(c_0-H_1)^2=
+\mathbb E(c_0-H_0)^2+\mathbb E(H_1-H_0)^2$.
+Use the expanded risk conditional on $\mathcal F_1$ and subtract the two
+policies. Taking $c_j=H_j$ proves Eq.~\eqref{eq:direction-information}.
+\end{proof}
+Additional alignment information helps the ideal policy strictly only if it
+changes the conditional prediction on a set of positive probability.
+Even then a particular direction penalty can lose that benefit through policy
+approximation error. Its sign and coefficient cannot be justified by the
+mere availability of directional information.
+
+\subsection{Why threshold tightening alone is not a proof of improvement}
+Set $f(\theta)=\theta^2/2$, $\theta=1$, $v=0$, $U=G=1$.
+Both $c_h=0.8$ and $c_l=0.4$ actively clip. At $\eta=0.1$, their next
+losses are 0.4232 and 0.4608: tightening increases loss by 0.0376.
+At $\eta=3$, losses are 0.98 and 0.02: tightening decreases loss by 0.96.
+A negative stored alignment does not identify which step-size regime holds.
+These one-step examples refute universal benefit from tightening; they are
+not complete DAGC training trajectories.
+
+\paragraph{What remains unproved for DAGC.}
+DAGC has not been shown to predict $H_{\mathcal F}$ accurately enough,
+to obtain incremental information from alignment, or to satisfy this model's
+assumptions throughout training. G1 estimates a different risk target.
+Consequently, these conditional proofs explain when feedback can help;
+they do not establish DAGC's empirical incremental benefit or generalization.
+Paired replay, median, no-alignment, and bound-only controls remain needed.
+
 
 \end{document}

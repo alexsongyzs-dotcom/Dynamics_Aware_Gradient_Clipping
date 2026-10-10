@@ -45,3 +45,7 @@ The intended venue is ICML 2027, with the ICML 2026 style retained provisionally
 The new template and submission rules still need to be checked when available.
 This is a research draft, not an accepted paper. The preprint option avoids claiming that the draft is under review. The anonymous author block
 is retained; final affiliation and correspondence details require the authors.
+
+## Integrated local revision (2026-10-10)
+
+The completed lyx1 confirmation manuscript is integrated with the earlier audited literature, screening/V1 appendices and seven mathematical propositions. All formal proofs are in the appendix. The publication copy is maintained on `develop/yzs`; main is unchanged. See `integration_notes_20261010.md`.
