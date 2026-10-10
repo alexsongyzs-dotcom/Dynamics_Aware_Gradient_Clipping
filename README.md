@@ -7,6 +7,12 @@ and consecutive-gradient alignment. DAGC-V2 strengthens clipping when exposure
 exceeds a reference level. Experiments investigate its accuracy and protection
 mechanism in unstable training with small CNN and MLP models.
 
+## Reviewer guide
+
+Start with the [experiment evidence guide](docs/experiment_catalog/README.md), which separates V1 diagnostics, V2 development, exploratory evaluation, mechanism controls, and screening. The [published-file inventory](docs/experiment_catalog/published_files.csv) provides artifact paths and SHA-256 hashes; the [audit report](paper/audit_20261010/audit_report.md) states the scientific verification scope.
+
+The current evidence does not establish an incremental benefit from alignment or online feedback over calibration-trace replay. The separate 156-run screening failed its G1 gate, and completed confirmation results are not included in this main-branch snapshot. See the guide for protocols, limitations, and branch distinctions.
+
 ## Method
 
 The clipped gradient and controller update are
@@ -73,7 +79,7 @@ result = train_run({
 print(result["test_acc"])
 ```
 
-## Held-out evaluation
+## Exploratory V2 evaluation
 
 Each condition uses eight paired evaluation seeds, 5,000 training images,
 2,000 test images, 15 epochs, batch size 256, and SGD with momentum 0.9.
@@ -87,10 +93,10 @@ its development comparison. AGC uses coefficient 0.01.
 | FashionMNIST / MLP | 0.8 | 82.59 ± 0.83 | 82.29 ± 1.12 | 77.51 ± 1.99 | **84.12 ± 0.52** |
 | MNIST / CNN | 0.8 | 97.23 ± 0.43 | 96.84 ± 0.36 | 85.19 ± 7.41 | **98.39 ± 0.15** |
 
-Values are test accuracy (%) with normal-approximation 95% confidence intervals.
+The historical table below reports test accuracy (%) with normal-approximation 95% confidence intervals. The linked audited figure and manuscript use Student-t intervals. Fresh evaluation seeds were used, but the test distribution was consulted during development; these results are exploratory rather than clean held-out confirmation evidence.
 Unclipped runs have divergence rates of 87.5%, 100%, 100%, and 75%, respectively.
 
-![Held-out evaluation](results/figures/dagc_v2/heldout_accuracy.png)
+![Audited V2 evaluation](paper/figures/audited_v2_benchmarks.png)
 
 ```bash
 python scripts/run_dagc_v2_evaluation.py --lr 0.8 --seeds 300 301 302 303 304 305 306 307
@@ -117,7 +123,7 @@ matching and produces a predetermined threshold schedule.
 | Full V2 | 86.79 ± 0.55 | 0.798 |
 | No alignment | 86.63 ± 0.77 | 0.790 |
 | No exposure | 81.33 ± 1.03 | 0.399 |
-| Frozen multiplicative adaptation | 80.74 ± 0.86 | 0.346 |
+| Zero-gain adaptation (moving bounds retained) | 80.74 ± 0.86 | 0.346 |
 | Approximately intensity-matched fixed | 85.61 ± 0.77 | 0.762 |
 | Calibration-trace replay | 86.58 ± 0.46 | 0.789 |
 | AutoClip, tenth percentile | 79.88 ± 1.44 | 0.232 |
