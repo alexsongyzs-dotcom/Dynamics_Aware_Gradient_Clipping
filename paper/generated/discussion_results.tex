@@ -1,16 +1,17 @@
-The evidence supports a narrow negative conclusion about the frozen V2 rule:
-it does not outperform a validation-tuned fixed threshold in any of the three
-conditions, and its threshold adaptation adds no practically resolved
-advantage over calibration replay under the stated margin. The lower bound
-accounts for nearly all threshold updates, while its directional adjustments are masked by
-projection on CIFAR-10. Calling these runs successful target tracking or evidence
-that online directional feedback is necessary would contradict the controls.
-They instead show how an apparently dynamic controller can behave mostly as a
-historical-scale clipping rule.
+The combined evidence identifies a regime of projection-dominated control.
+DAGC spends nearly all threshold updates at its moving lower bound. Negative
+alignment EMAs occur on CIFAR-10, but every such update is projected to that
+bound, and the paired no-alignment trajectories are identical. This supports
+masking by projection in these runs, rather than the stronger claim that
+direction is intrinsically uninformative. Calibration replay attains equivalent
+accuracy within the prespecified per-condition tolerance; this empirical
+result is distinct from the exact same-run replay theorem in the appendix.
 
-The FashionMNIST and higher-rate CIFAR fixed-baseline gaps are statistically
-resolved but smaller than 0.5 points. Statistical inferiority can coexist with
-practical equivalence at a specified tolerance; the larger low-rate CIFAR gap
-falls outside that tolerance. The finding should guide subsequent research
-toward identifying conditions where feedback is informative, rather than
-retuning the present confirmation runs after observing their test scores.
+The controller loses to tuned fixed clipping in all three conditions. Two
+accuracy gaps, on FashionMNIST and higher-rate CIFAR-10, are statistically
+resolved yet satisfy the stated $\pm0.5$ point equivalence criterion; the
+low-rate CIFAR-10 gap does not. Practical tolerance and statistical difference
+answer distinct questions. Neither supplies a benefit-cost argument without
+measuring the corresponding costs. Earlier small-subset gains remain valid
+observations, but do not establish transfer across the changed data sizes,
+schedules, architectures, and baseline selection rules.

@@ -1,7 +1,6 @@
-Across 405 audited runs, DAGC falls below validation-tuned fixed clipping by
-0.18, 1.17, and 0.29 percentage points in the three confirmation conditions.
-All three differences favor fixed clipping after multiplicity correction.
-DAGC and calibration-trace replay meet the prespecified, per-comparison
-$\pm0.5$ point equivalence criterion in all three conditions. The controller
-occupies its lower bound on 97.2--99.1\% of updates, and removing alignment
-leaves logged CIFAR-10 trajectories unchanged.
+Across 405 audited calibration and confirmation outcomes, DAGC falls below
+tuned fixed clipping by 0.18, 1.17, and 0.29 percentage points in the three
+confirmation conditions; all three paired deficits survive Holm correction.
+Replay meets the prespecified per-comparison $\pm0.5$ point equivalence
+criterion. The controller occupies its moving lower bound on 97.2--99.1\% of
+updates, and removing alignment leaves all logged CIFAR-10 trajectories unchanged.

@@ -27,20 +27,20 @@
 \vskip 0.3in
 
 \begin{abstract}
-Adaptive gradient clipping can improve training without establishing that its
-feedback signals are useful. We examine Dynamics-Aware Gradient Clipping
-(DAGC), a bounded threshold controller driven by clipping exposure and
-consecutive-gradient alignment. Its exposure term tightens clipping when
-clipping is already frequent. We show that an interior target-exposure
-equilibrium is unstable in a stationary mean-field model, even with
-exponential smoothing. We then compare the frozen controller with tuned
-clipping rules, an alignment ablation, and a predetermined threshold schedule
-on FashionMNIST and CIFAR-10, using validation-only calibration and twelve
-paired confirmation seeds in each of three conditions.
+An adaptive clipping rule can protect training even when its feedback signals
+provide little benefit beyond the resulting threshold schedule. We study this
+distinction in Dynamics-Aware Gradient Clipping (DAGC), a bounded controller
+using clipping exposure and consecutive-gradient alignment. A stationary
+mean-field analysis shows that its excess-exposure response reinforces clipping
+rather than stabilizing a target rate. We evaluate the frozen V2 rule against
+validation-tuned clipping, an alignment ablation, and calibration-trace replay
+on FashionMNIST and CIFAR-10, with twelve paired seeds per condition.
 \input{generated/abstract_results}
-These controls separate threshold scheduling from evidence for an online
-feedback mechanism; the analysis does not claim convergence of the coupled
-training dynamics.
+The results identify a concrete regime in which projection masks feedback and
+predetermined thresholds reproduce its accuracy within a stated tolerance.
+They motivate separating protection, threshold scheduling, and feedback value
+when evaluating adaptive clipping, without claiming universal superiority or
+convergence of the coupled training dynamics.
 \end{abstract}
 ]
 \printAffiliationsAndNotice{}
@@ -78,14 +78,17 @@ threshold trace constructed on separate calibration runs tests the incremental
 value of adapting that threshold to the new training trajectory. Replay still
 uses the current norm to apply clipping; only its threshold is predetermined.
 
-Our contribution is an analysis and controlled evaluation of this concrete
-controller. First, we derive its local positive-feedback behavior with the
-exposure EMA included. Second, we define a reproducible comparison with
-validation-only parameter selection, identical paired training streams, and
-explicit failure accounting. Third, we preserve the earlier negative mechanism
-controls and evaluate transfer to longer training and a residual network on
-RGB images. The scope is small image classifiers trained with momentum SGD;
-there is no claim of broad optimizer, architecture, or language-model transfer.
+We ask three distinct questions: does clipping protect training, does the
+chosen threshold profile improve accuracy, and does feedback add value beyond
+that profile? Our contribution is a controlled study of these questions for
+one concrete controller. A local analysis identifies positive exposure
+feedback; paired confirmation separates its effect from tuned fixed clipping,
+magnitude-only adaptation, and replay; complete-trace diagnostics show when
+projection masks the direction term. The combined evidence explains how
+promising small-subset results can coexist with limited feedback value under
+a longer, validation-calibrated protocol. It does not establish that feedback
+is unhelpful in general. Our scope is small image classifiers and momentum
+SGD, with no claim of architecture-independent or language-model transfer.
 
 \section{Related Work}
 \paragraph{Adaptive gradient and update clipping.}
@@ -420,14 +423,29 @@ positive-feedback interpretation, but its small sample and development role
 preclude precise claims of performance insensitivity.
 
 \section{Discussion and Limitations}
-A controller can influence an optimization trajectory without the proposed
-feedback signal being necessary for its gains. The replay comparison removes
-threshold adaptation to the confirmation trajectory; the median comparison
-retains online magnitude information but removes exposure and alignment;
-and the no-alignment comparison removes only direction. Their scopes differ,
-so no single one is a complete mechanistic explanation.
+The central distinction is between protection from unstable updates and the
+incremental value of a controller's information. On FashionMNIST, every clipped
+confirmation policy completes its budget, while eight unclipped runs fail.
+Protection is therefore a shared benefit of clipping in this condition, not
+evidence unique to DAGC. Replay removes threshold adaptation to the new run;
+the median control retains online magnitude information; the alignment ablation
+removes direction alone. Their agreement or disagreement answers different
+questions and must not be collapsed into a single mechanism claim.
 
 \input{generated/discussion_results}
+
+
+\paragraph{Accuracy, calibration, and implementation cost.}
+A useful method need not maximize accuracy if it offers a verified advantage
+in calibration effort, latency, memory, or reliability. The current study does
+not establish such a trade-off for DAGC. Its parameters are frozen from earlier
+development, whereas the four tuned baselines receive equal new search
+budgets; the historical optimization effort is unequal and was not measured
+as a comparable total cost. Full-gradient alignment adds an $O(d)$ stored
+vector and a dot product. Campaign timings are not isolated measurements of
+controller overhead. Accordingly, we neither infer efficiency from small
+accuracy gaps nor claim that replay is computationally superior. Those claims
+require matched timing, memory, and calibration-cost measurements.
 
 The study remains limited to two image datasets, two small architectures,
 one optimizer, and fixed learning-rate schedules. Sixty CIFAR epochs are
@@ -447,13 +465,16 @@ independent-calibration replay; the confirmation results do not support either
 claim.
 
 \section{Conclusion}
-DAGC-V2 implements positive exposure feedback, not stable target-rate tracking
-in the stationary mean-field model. A useful empirical claim must therefore
-survive comparisons with magnitude-only adaptation and a predetermined
-threshold schedule, in addition to tuned fixed clipping. Our protocol makes
-those comparisons explicit, preserves failure outcomes, and separates legacy
-exploration from current validation-only selection.
+Adaptive clipping should be evaluated at three levels: protection, threshold
+selection, and the value of feedback beyond the selected profile. For the
+frozen DAGC-V2 rule, the stationary analysis identifies positive exposure
+feedback and the confirmation study reveals strong lower-bound control.
 \input{generated/conclusion_results}
+A productive next step is to identify a measurable condition in which an
+informative signal changes the applied threshold and improves a specified
+accuracy, stability, or cost objective. The present experiments provide a
+reproducible reference for that question, not evidence that the current rule
+already achieves it.
 
 \section*{Impact Statement}
 This work examines optimization behavior in small image classifiers. It does

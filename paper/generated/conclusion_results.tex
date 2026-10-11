@@ -1,8 +1,6 @@
-Across all 405 audited runs, the frozen controller fails the broad-superiority
-criterion and loses to tuned fixed clipping in each confirmation condition.
-Replay meets the prespecified per-condition equivalence criterion, while
-the complete CIFAR traces show that lower-bound projection masks the
-alignment term. Together, these controls limit the evidence for the proposed
-feedback signals in these tests. These results delimit the
-method's empirical claim and provide a reproducible example of separating
-threshold scheduling from evidence for an online feedback mechanism.
+Tuned fixed clipping is more accurate in all three tested conditions, while
+calibration replay meets the stated per-condition equivalence criterion.
+The CIFAR alignment ablation and full-trace audit identify projection masking
+as a concrete limit of the implemented direction feedback. These results
+separate a useful clipping intervention from evidence that its proposed
+feedback signals add value; they do not rule out feedback gains elsewhere.
