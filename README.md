@@ -197,3 +197,7 @@ rejection, paired inference, and multiplicity correction.
 ## Authors and license
 
 Yuxin Li and Zisong Yuan. Released under the [MIT License](LICENSE).
+
+## Explicit V2 reproduction and identity
+
+See the [V2 implementation and reproduction guide](docs/v2_reproduction_guide.md), [explicit original configuration](configs/v2/original_fashion_cnn.json), and [handoff note](docs/v2_handoff_20261011.md). The completed lyx1 study already activates V2; the engine version label is not the algorithm version. Run `python -m scripts.verify_v2_identity` before training.
