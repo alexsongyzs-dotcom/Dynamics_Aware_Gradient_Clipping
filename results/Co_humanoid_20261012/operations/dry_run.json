@@ -1,0 +1,51 @@
+{
+  "config": {
+    "dataset": "fashion_mnist",
+    "model": "small_cnn",
+    "optimizer": "sgd",
+    "epochs": 15,
+    "batch_size": 256,
+    "lr": 0.8,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "num_workers": 0,
+    "train_size": 5000,
+    "test_size": 2000,
+    "projection_dim": 8,
+    "divergence_loss": 100.0,
+    "divergence_jump": 50.0,
+    "clipping": {
+      "name": "dagc",
+      "init_c": 0.5,
+      "gamma": 0.05,
+      "beta": 0.9,
+      "relax": 0.3,
+      "osc_weight": 3.0,
+      "beta_a": 0.9,
+      "c_min_scale": 0.1,
+      "c_max_scale": 10.0,
+      "norm_window": 200,
+      "exposure_target": 0.1
+    },
+    "device": "cuda",
+    "data_dir": "/mnt/data/users/yuxin/workspace/Co_humanoid/data"
+  },
+  "seeds": [
+    300,
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    307
+  ],
+  "source_sha256": {
+    "src/clipping.py": "8ec83adbcb81e5849470aea5ba359d4a0ce14f24a48173de88fd5a7a1e360279",
+    "src/train.py": "7df76fa31bf027d6cdd7b8b7f72e3fef843e396b2e1fdc50576b9778f6a02281",
+    "src/data.py": "7645ec4af8369e7fcee19b7bcc3931c9ad81eddf216af517080ce62991cbbf44",
+    "src/models.py": "5b66fce7d7c30e926b4d14523db5b544ffa50d95a74059f435b7b88cfa25b170",
+    "src/dynamics.py": "dfcb136dd72c4951d62bfa91dbd4b3446ab380c73d0be9ebebccbbb066cd99ea"
+  },
+  "scope": "Original exploratory protocol; not validation-isolated confirmation"
+}

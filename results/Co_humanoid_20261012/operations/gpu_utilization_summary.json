@@ -1,0 +1,58 @@
+[
+  {
+    "gpu": 0,
+    "seed": 300,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 11.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 1,
+    "seed": 301,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 11.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 2,
+    "seed": 302,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 10.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 3,
+    "seed": 303,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 11.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 4,
+    "seed": 304,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 10.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 5,
+    "seed": 305,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 10.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 6,
+    "seed": 306,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 11.0,
+    "peak_sampled_memory_mib": 657.0
+  },
+  {
+    "gpu": 7,
+    "seed": 307,
+    "samples": 9,
+    "peak_sampled_gpu_utilization_percent": 11.0,
+    "peak_sampled_memory_mib": 657.0
+  }
+]

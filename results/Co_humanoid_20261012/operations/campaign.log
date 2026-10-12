@@ -1,0 +1,25 @@
+Started all eight workers
+{"seed": 300, "gpu": 0, "exit_code": 0, "elapsed_seconds": 18.06964683532715, "result_exists": true}
+{"seed": 301, "gpu": 1, "exit_code": 0, "elapsed_seconds": 18.09520673751831, "result_exists": true}
+{"seed": 302, "gpu": 2, "exit_code": 0, "elapsed_seconds": 18.11672282218933, "result_exists": true}
+{"seed": 303, "gpu": 3, "exit_code": 0, "elapsed_seconds": 18.135777950286865, "result_exists": true}
+{"seed": 304, "gpu": 4, "exit_code": 0, "elapsed_seconds": 18.15398597717285, "result_exists": true}
+{"seed": 305, "gpu": 5, "exit_code": 0, "elapsed_seconds": 18.172915935516357, "result_exists": true}
+{"seed": 306, "gpu": 6, "exit_code": 0, "elapsed_seconds": 18.190734386444092, "result_exists": true}
+{"seed": 307, "gpu": 7, "exit_code": 0, "elapsed_seconds": 18.20838952064514, "result_exists": true}
+{
+  "experiment": "Co_humanoid",
+  "port": 32,
+  "source_commit": "10ee9f8a71c02baa66c5fb7aaf6f7f67bbf7b167",
+  "planned_runs": 8,
+  "completed_runs": 8,
+  "process_failures": 0,
+  "divergences": 0,
+  "mean_accuracy": 0.864375,
+  "sample_std_accuracy": 0.00738120199270709,
+  "historical_mean_accuracy": 0.8655625,
+  "mean_delta_pp": -0.11874999999999664,
+  "all_runs_complete": true,
+  "scope": "Original exploratory protocol; not validation-isolated confirmation",
+  "finished_utc": "2026-10-12T08:58:29.751453+00:00"
+}

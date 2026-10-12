@@ -1,0 +1,33 @@
+{
+  "started_utc": "2026-10-12T08:57:15.038623+00:00",
+  "hostname": "dsw-832561-6c5fbc8889-7cnwl",
+  "python": "3.11.16 (main, Sep  2 2026, 23:39:52) [GCC 15.3.0]",
+  "executable": "/mnt/data/public_tools/miniconda3/envs/rehearse/bin/python",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "numpy": "1.26.4",
+    "scipy": "1.15.3",
+    "pytest": "9.1.1"
+  },
+  "cuda": "12.8",
+  "cudnn": 91900,
+  "gpu_count": 8,
+  "gpus": [
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell",
+    "NVIDIA RTX PRO 5000 72GB Blackwell"
+  ],
+  "source_commit": "10ee9f8a71c02baa66c5fb7aaf6f7f67bbf7b167",
+  "torch_threads": 2,
+  "environment": {
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "OPENBLAS_NUM_THREADS": "2"
+  }
+}

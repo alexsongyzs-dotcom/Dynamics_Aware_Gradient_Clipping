@@ -1,0 +1,17 @@
+{
+  "status": "completed",
+  "experiment": "Co_humanoid",
+  "port": 32,
+  "source_commit": "10ee9f8a71c02baa66c5fb7aaf6f7f67bbf7b167",
+  "planned_runs": 8,
+  "completed_runs": 8,
+  "process_failures": 0,
+  "divergences": 0,
+  "mean_accuracy": 0.864375,
+  "sample_std_accuracy": 0.00738120199270709,
+  "historical_mean_accuracy": 0.8655625,
+  "mean_delta_pp": -0.11874999999999664,
+  "all_runs_complete": true,
+  "scope": "Original exploratory protocol; not validation-isolated confirmation",
+  "finished_utc": "2026-10-12T08:58:29.751453+00:00"
+}

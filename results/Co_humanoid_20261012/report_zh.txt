@@ -1,0 +1,57 @@
+Co_humanoid：V2 原协议独立复现报告
+完成日期：2026-10-12（北京时间）
+
+结果：8/8 个种子完成，运行失败 0，发散 0；每个种子 300/300 步。
+平均准确率 86.4375%，种子间样本标准差 0.7381 个百分点。
+历史同种子均值 86.5563%，本次平均差 -0.1187 个百分点。
+
+种子  GPU  本次准确率  历史准确率  差值（百分点）
+300   0    86.45%       86.25%       +0.20
+301   1    87.45%       87.20%       +0.25
+302   2    86.35%       87.30%       -0.95
+303   3    86.55%       86.75%       -0.20
+304   4    87.25%       87.85%       -0.60
+305   5    85.55%       85.50%       +0.05
+306   6    85.30%       85.40%       -0.10
+307   7    86.60%       86.20%       +0.40
+
+实验来源与配置
+仓库：https://github.com/alexsongyzs-dotcom/Dynamics_Aware_Gradient_Clipping/tree/develop/yzs
+固定提交：10ee9f8a71c02baa66c5fb7aaf6f7f67bbf7b167
+依据：docs/v2_handoff_20261011.md、docs/v2_reproduction_guide.md。
+FashionMNIST / SmallCNN；训练5000、测试2000；15 epochs；batch 256；恒定LR 0.8；SGD momentum 0.9、weight_decay 1e-4。
+DAGC-V2：exposure_target=0.1、init_c=0.5、gamma=0.05，其他参数见 manifest.json。
+GPU 0–7 分别运行种子300–307，使用原始 scripts.run_v2_reproduction 入口。训练源码未修改。
+每个种子有独立 shard manifest；汇总 manifest 由原入口 dry-run 生成，已验证全部种子配置与源文件摘要。
+
+核查与运行环境
+V2 源码摘要、归档源码字节和320步控制器状态检查全部通过；pytest：16 passed。
+SSH：ssh -p 32 -i ~/.ssh/id_yuxin yuxin@47.116.73.163
+节点：dsw-832561-6c5fbc8889-7cnwl；8×NVIDIA RTX PRO 5000 72GB Blackwell。
+Python 3.11.16；PyTorch 2.11.0+cu128；torchvision 0.26.0+cu128；CUDA 12.8；cuDNN 91900；NumPy 1.26.4。
+复用已安装环境进行读取和执行，没有修改该环境。OMP/MKL/OpenBLAS 线程数均为2。
+训练任务于北京时间16:58:11左右并行启动，16:58:29完成；约18秒包含进程启动、导入、训练与写出。
+每2秒采样一次GPU：8卡均观察到657MiB显存占用，采样最高利用率为11%；小模型的本轮复现没有达到持续满负载。
+首次检查过33节点，未在33启动训练；随后按用户指示切换32节点。
+
+解释边界
+本次均值与历史均值接近，逐种子差值为−0.95至+0.40个百分点；这些数据不构成统计等价性证明。
+历史参考来自固定提交下 results/dagc_v2_evaluation/raw_runs.csv 的 dagc_v2 行。
+本次是原探索性测试集协议的V2复现，没有重新调优基线，不能用于宣称相对基线的新优势。
+硬件/软件与历史运行未保证完全一致，未证明逐种子差异的具体原因。已完成论文和原始证据均保持原状。
+
+后续建议（尚未执行）
+若继续排查原小样本结果与全数据确认结果的差异，应另设事后设计协议，固定其余因素分别考察数据量、训练时长、恒定/余弦LR、模型和基线选择方式。
+先用训练/验证划分与校准种子完成选择，再冻结配置，用新的配对种子作最终比较；不以300–307这些已观察种子的测试结果调参。
+本轮按交接要求先完成原协议复现，没有启动405次已完成研究的重复任务。
+
+证据位置
+服务器根目录：/mnt/data/users/yuxin/workspace/Co_humanoid
+服务器结果：/mnt/data/users/yuxin/workspace/Co_humanoid/results/v2_original_recheck_lr0p8
+服务器日志与环境：/mnt/data/users/yuxin/workspace/Co_humanoid/operations
+本地目录：/home/descfly/Research/DAGC/Dynamics_Aware_Gradient_Clipping/results/Co_humanoid_20261012
+完整种子JSON及轨迹：results/v2_original_recheck_lr0p8/seed_300.json 至 seed_307.json。
+逐种子对照：results/v2_original_recheck_lr0p8/paired_comparison.csv；汇总：summary.json。
+执行脚本：operations/run_campaign.py；版本检查：operations/v2_identity.json；测试：operations/pytest.log。
+环境：operations/environment.json、pip_freeze.txt；数据摘要：dataset_sha256.json；利用率：gpu_utilization.csv。
+全部交付文件摘要见 SHA256SUMS.json。

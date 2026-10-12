@@ -1,0 +1,8 @@
+{
+  "archived_training_source_verified": true,
+  "confirmation_policy_is_v2": true,
+  "matched_controller_steps": 320,
+  "current_source_bytes_match_archive": true,
+  "current_source_matches_after_line_ending_normalization": true,
+  "note": "lyx1-v1 is the training engine version, not DAGC-V1"
+}
